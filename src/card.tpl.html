@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>透析陪护 · 应急 饮食 记录 陪护</title>
+<meta name="theme-color" content="#16302B">
+<style>
+/* ---------- 设计变量：暖纸底 + 生理盐水青 + 碘伏砖红（红只用于危重信号） ---------- */
+:root{
+  --canvas:#F4F1E9;
+  --canvas-2:#EAE5D7;
+  --surface:#FFFCF5;
+  --surface-2:#F8F3E7;
+  --world:#16302B;
+  --accent:#1F6E63;
+  --accent-soft:#DFEDE8;
+  --ink:#1A1E1C;
+  --muted:#6E736B;
+  --line:#D8D2C2;
+  --alert:#9E3A2C;
+  --alert-soft:#F2E2DB;
+  --r-shell:22px;
+  --r-card:8px;
+  --r-ctl:6px;
+  --r-pill:999px;
+  --shadow-card:0 1px 2px rgba(22,48,43,.05),0 8px 20px -8px rgba(22,48,43,.12),0 26px 48px -28px rgba(22,48,43,.18);
+  --shadow-float:0 2px 4px rgba(22,48,43,.06),0 10px 24px -10px rgba(22,48,43,.18),0 1px 0 rgba(255,255,255,.6) inset;
+  --f-display:"Songti SC","Source Han Serif SC","Noto Serif SC","SimSun",Georgia,serif;
+  --f-body:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,sans-serif;
+  --f-num:ui-monospace,"SF Mono","Consolas","Roboto Mono",monospace;
+}
+body.dark{
+  color-scheme:dark;
+  --canvas:#0C1214;
+  --canvas-2:#080D0F;
+  --surface:#141D1F;
+  --surface-2:#182225;
+  --world:#091614;
+  --accent:#5AA99A;
+  --accent-soft:#17302C;
+  --ink:#E8E5DA;
+  --muted:#94A09B;
+  --line:#263133;
+  --alert:#D97261;
+  --alert-soft:#2A1A17;
+  --shadow-card:0 1px 0 rgba(255,255,255,.04) inset,0 8px 22px -10px rgba(0,0,0,.5);
+  --shadow-float:0 1px 0 rgba(255,255,255,.06) inset,0 10px 28px -12px rgba(0,0,0,.62);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--canvas);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:17px;
+  line-height:1.62;
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+  transition:background-color .25s ease,color .25s ease;
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.shell{max-width:520px;margin:0 auto;min-height:100vh;background:var(--canvas);position:relative}
+
+/* ---------- 顶部：深色领地 + 输液管细纹 ---------- */
+.hero{
+  position:relative;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 46px),
+    radial-gradient(120% 90% at 88% 0%,rgba(90,169,154,.22) 0%,transparent 62%),
+    var(--world);
+  color:#F3EFE4;
+  padding:calc(18px + env(safe-area-inset-top)) 20px 24px;
+  border-radius:0 0 var(--r-shell) var(--r-shell);
+  overflow:hidden;
+}
+.hero-bar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mark{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(243,239,228,.62);font-family:var(--f-num)}
+.iconbtn{
+  width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;
+  border:1px solid rgba(243,239,228,.22);border-radius:var(--r-ctl);
+  background:rgba(243,239,228,.06);color:#F3EFE4;cursor:pointer;
+}
+.iconbtn svg{width:20px;height:20px}
+.hero h1{
+  font-family:var(--f-display);font-weight:700;
+  font-size:clamp(30px,8.4vw,38px);line-height:1.12;letter-spacing:.01em;
+  margin:14px 0 6px;
+}
+.hero-sub{font-size:14.5px;color:rgba(243,239,228,.72);max-width:20em}
+.hero-call{
+  margin-top:18px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;
+  border-top:1px solid rgba(243,239,228,.16);padding-top:16px;
+}
+.call-main{
+  display:inline-flex;align-items:center;gap:9px;
+  background:#F3EFE4;color:#1B241F;text-decoration:none;
+  padding:11px 16px 11px 13px;border-radius:var(--r-pill);
+  font-weight:700;font-size:16px;letter-spacing:.02em;
+}
+.call-main svg{width:19px;height:19px;color:var(--alert)}
+.hero-call small{font-size:12.5px;line-height:1.55;color:rgba(243,239,228,.62)}
+
+/* ---------- 区块 ---------- */
+main{padding:0 16px 8px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px}
+.sec-num{font-family:var(--f-num);font-size:11px;letter-spacing:.12em;color:var(--accent)}
+.sec-title{font-size:20px;font-weight:700;letter-spacing:.01em}
+.sec-rule{flex:1;height:1px;background:var(--line);transform:translateY(-3px)}
+.sec-note{font-size:13px;color:var(--muted);margin:-4px 0 14px}
+
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:16px 16px 15px;margin-bottom:12px;box-shadow:var(--shadow-card);
+}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.card-title{font-size:17.5px;font-weight:700;letter-spacing:.01em}
+.meta{font-family:var(--f-num);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.sev{
+  flex:0 0 auto;font-size:12px;font-weight:700;letter-spacing:.06em;
+  padding:3px 8px;border-radius:var(--r-ctl);
+  color:#FBF3EF;background:var(--alert);
+}
+.sev.low{background:transparent;color:var(--muted);border:1px solid var(--line)}
+
+/* ---------- 电话 ---------- */
+.tel-list{list-style:none}
+.tel-list li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.tel-list li:first-child{border-top:0;padding-top:2px}
+.tel-role{font-size:15px;color:var(--muted)}
+.tel-num{
+  flex:0 0 auto;white-space:nowrap;text-align:center;
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:96px;min-height:38px;
+  font-family:var(--f-num);font-size:17.5px;font-weight:600;letter-spacing:.03em;
+  color:var(--accent);text-decoration:none;padding:6px 11px;border-radius:var(--r-ctl);background:var(--accent-soft);
+}
+.tel-num.empty{color:var(--muted);background:transparent;border:1px solid var(--line);font-family:var(--f-body);font-size:14.5px;font-weight:600;letter-spacing:0}
+details.edit{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+details.edit summary{cursor:pointer;font-size:13.5px;color:var(--muted);list-style:none;display:flex;align-items:center;gap:6px}
+details.edit summary::-webkit-details-marker{display:none}
+details.edit summary::before{content:"＋";font-family:var(--f-num);color:var(--accent)}
+details.edit[open] summary::before{content:"－"}
+.field{margin-top:10px}
+.field label{display:block;font-size:12.5px;letter-spacing:.05em;color:var(--muted);margin-bottom:5px}
+input,textarea,select{
+  width:100%;font-family:var(--f-body);font-size:16px;color:var(--ink);
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-ctl);
+  padding:10px 12px;
+}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.45}
+textarea{resize:vertical;min-height:76px;line-height:1.55}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:44px;padding:11px 16px;border-radius:var(--r-pill);
+  border:1px solid var(--accent);background:var(--accent);color:#F4F1E9;
+  font-family:var(--f-body);font-size:15.5px;font-weight:600;cursor:pointer;
+}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.quiet{background:transparent;color:var(--muted);border-color:var(--line)}
+.btn.danger{background:transparent;color:var(--alert);border-color:var(--alert)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn-row .btn{flex:1 1 auto;min-width:110px}
+
+/* ---------- 应急步骤 ---------- */
+.sign{font-size:14.5px;color:var(--muted);background:var(--surface-2);border-radius:var(--r-ctl);padding:9px 11px;margin-bottom:12px}
+.sign b{color:var(--ink);font-weight:600}
+ol.steps{list-style:none;counter-reset:s}
+ol.steps li{
+  counter-increment:s;position:relative;padding-left:30px;margin-bottom:9px;font-size:15.5px;line-height:1.58;
+}
+ol.steps li::before{
+  content:counter(s);position:absolute;left:0;top:2px;
+  width:21px;height:21px;display:grid;place-items:center;
+  font-family:var(--f-num);font-size:11.5px;font-weight:600;
+  color:var(--accent);background:var(--accent-soft);border-radius:var(--r-ctl);
+}
+ol.steps li b{font-weight:600}
+.never{
+  margin-top:12px;border-left:2px solid var(--alert);padding:2px 0 2px 11px;
+  background:linear-gradient(90deg,var(--alert-soft),transparent 78%);
+}
+.never span{font-size:12px;letter-spacing:.14em;color:var(--alert);font-family:var(--f-num);text-transform:uppercase}
+.never p{font-size:15px;color:var(--ink);margin-top:2px;line-height:1.55}
+
+/* ---------- 饮食 ---------- */
+.foods{list-style:none;display:grid;grid-template-columns:1fr;gap:0}
+.foods li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:15.5px}
+.foods li:first-child{border-top:0;padding-top:2px}
+.foods li em{font-style:normal;font-family:var(--f-num);font-size:11px;color:var(--muted);min-width:1.6em;padding-top:3px}
+.tag-no,.tag-lim,.tag-ok{
+  display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;
+  padding:3px 8px;border-radius:var(--r-ctl);margin-bottom:9px;
+}
+.tag-no{background:var(--world);color:#F0ECE0}
+.tag-lim{background:var(--world);color:#F0ECE0;opacity:.72}
+.tag-ok{background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent)}
+.hint{font-size:13px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.hint b{color:var(--ink);font-weight:600}
+
+/* ---------- 表单 ---------- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* 血糖：值 + 时点 + 低值提醒 */
+.glu-row{display:flex;gap:8px;align-items:center;margin-top:5px}
+.glu-row input{flex:1;min-width:0}
+.glu-row select{flex:0 0 8.6em;width:8.6em;font-size:15px;padding:10px 6px}
+.glu-low-num{color:var(--alert);font-weight:700}
+.glu-warn{
+  margin-top:8px;background:var(--alert-soft);border-left:2px solid var(--alert);
+  border-radius:0 var(--r-ctl) var(--r-ctl) 0;padding:9px 11px;
+  font-size:13.5px;line-height:1.6;color:var(--ink);
+}
+.glu-warn b{color:var(--alert)}
+.glu-tag{font-style:normal;font-size:11.5px;color:var(--muted);letter-spacing:.04em;margin-left:3px}
+.rec-vals .glu-low{color:var(--alert);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.chip{
+  border:1px solid var(--line);background:var(--surface-2);color:var(--ink);
+  font-family:var(--f-body);font-size:14px;padding:8px 12px;border-radius:var(--r-pill);cursor:pointer;
+}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#F4F1E9}
+
+/* ---------- 记录列表 ---------- */
+.rec{border-top:1px solid var(--line);padding:11px 0}
+.rec:first-child{border-top:0}
+.rec-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.rec-date{font-family:var(--f-num);font-size:13px;color:var(--muted);letter-spacing:.04em}
+.rec-vals{font-family:var(--f-num);font-size:14.5px;margin-top:3px;color:var(--ink)}
+.rec-vals i{font-style:normal;color:var(--muted);font-size:11px;margin-right:2px;letter-spacing:.05em}
+.rec-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.rec-tags span{font-size:11.5px;color:var(--alert);background:var(--alert-soft);padding:2px 7px;border-radius:var(--r-ctl)}
+.rec-note{font-size:13.5px;color:var(--muted);margin-top:5px}
+.x{background:none;border:0;color:var(--muted);font-family:var(--f-num);font-size:12px;cursor:pointer;padding:6px 2px}
+.empty{font-size:14px;color:var(--muted);padding:14px 0 4px;text-align:center}
+
+/* ---------- 陪护工具 ---------- */
+.med{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.med:first-child{border-top:0;padding-top:2px}
+.med-time{font-family:var(--f-num);font-size:14px;font-weight:600;color:var(--accent);min-width:4.2em}
+.med-main{flex:1;font-size:15px}
+.med-main small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
+.check{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--line);cursor:pointer}
+.check:first-of-type{border-top:0}
+.check input{width:22px;height:22px;flex:0 0 22px;accent-color:var(--accent);margin:0}
+.check span{font-size:15.5px}
+.check input:checked + span{color:var(--muted);text-decoration:line-through}
+.week{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.week button{
+  min-width:44px;height:40px;border-radius:var(--r-ctl);border:1px solid var(--line);
+  background:var(--surface-2);color:var(--ink);font-family:var(--f-body);font-size:14px;cursor:pointer;
+}
+.week button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#F4F1E9}
+
+/* ---------- 说明 ---------- */
+.prose{font-size:15.5px}
+.prose h3{font-size:16px;font-weight:700;margin:16px 0 6px}
+.prose p{color:var(--muted);margin-bottom:8px}
+.prose p b{color:var(--ink);font-weight:600}
+.prose ol,.prose ul{padding-left:20px;color:var(--muted);margin:6px 0 10px}
+.prose li{margin:5px 0}
+.disclaim{
+  border:1px solid var(--line);border-left:2px solid var(--alert);
+  border-radius:var(--r-card);padding:13px 14px;font-size:13.5px;line-height:1.6;color:var(--muted);
+  background:var(--surface);
+}
+
+/* ---------- 底部导航 ---------- */
+.tabbar{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:0;
+  width:min(100%,520px);z-index:40;
+  background:var(--surface);border-top:1px solid var(--line);
+  padding:7px 6px calc(7px + env(safe-area-inset-bottom));
+  display:grid;grid-template-columns:repeat(5,1fr);gap:2px;
+  box-shadow:0 -8px 24px -18px rgba(22,48,43,.5);
+}
+.tab{
+  border:0;background:none;color:var(--muted);font-family:var(--f-body);
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 2px 5px;border-radius:var(--r-ctl);cursor:pointer;
+  font-size:11.5px;letter-spacing:.04em;
+}
+.tab svg{width:22px;height:22px}
+.tab[aria-selected="true"]{color:var(--accent);background:var(--accent-soft)}
+.tab[aria-selected="true"] .lbl{font-weight:700}
+.panel[hidden]{display:none}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(10px);bottom:96px;
+  background:var(--world);color:#F3EFE4;font-size:14px;padding:10px 16px;border-radius:var(--r-pill);
+  opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:60;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="hero">
+    <div class="hero-bar">
+      <span class="mark">血液透析 · 家庭照护</span>
+      <button class="iconbtn" id="themeBtn" aria-label="切换夜间模式" title="切换夜间模式">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,104,104,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+      </button>
+    </div>
+    <h1>透析陪护</h1>
+    <p class="hero-sub">出事看应急，平时看饮食，每天记一笔。给家里照顾的人用。</p>
+    <div class="hero-call">
+      <a class="call-main" href="tel:120">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M144.27,45.93a8,8,0,0,1,9.8-5.66,86.22,86.22,0,0,1,61.66,61.66,8,8,0,0,1-5.66,9.8A8.23,8.23,0,0,1,208,112a8,8,0,0,1-7.73-5.94,70.35,70.35,0,0,0-50.33-50.33A8,8,0,0,1,144.27,45.93Zm-2.33,41.8c13.79,3.68,22.65,12.54,26.33,26.33A8,8,0,0,0,176,120a8.23,8.23,0,0,0,2.07-.27,8,8,0,0,0,5.66-9.8c-5.12-19.16-18.5-32.54-37.66-37.66a8,8,0,1,0-4.13,15.46Zm81.94,95.35A56.26,56.26,0,0,1,168,232C88.6,232,24,167.4,24,88A56.26,56.26,0,0,1,72.92,32.12a16,16,0,0,1,16.62,9.52l21.12,47.15,0,.12A16,16,0,0,1,109.39,104c-.18.27-.37.52-.57.77L88,129.45c7.49,15.22,23.41,31,38.83,38.51l24.34-20.71a8.12,8.12,0,0,1,.75-.56,16,16,0,0,1,15.17-1.4l.13.06,47.11,21.11A16,16,0,0,1,223.88,183.08Zm-15.88-2s-.07,0-.11,0h0l-47-21.05-24.35,20.71a8.44,8.44,0,0,1-.74.56,16,16,0,0,1-15.75,1.14c-18.73-9.05-37.4-27.58-46.46-46.11a16,16,0,0,1,1-15.7,6.13,6.13,0,0,1,.57-.77L96,95.15l-21-47a.61.61,0,0,1,0-.12A40.2,40.2,0,0,0,40,88,128.14,128.14,0,0,0,168,216,40.21,40.21,0,0,0,208,181.07Z"/></svg>
+        <span>120 急救</span>
+      </a>
+      <small>先联系透析中心，再考虑 120。别自己扛。</small>
+    </div>
+  </header>
+
+  <main id="flow">
+
+    <!-- ========== 01 应急 ========== -->
+    <section class="panel" id="panel-sos" role="tabpanel" aria-labelledby="tab-sos">
+      <div class="sec-head"><span class="sec-num">01</span><span class="sec-title">应急处置</span><span class="sec-rule"></span></div>
+      <p class="sec-note">按表现对号入座。危重一律先打电话，不要在家观察。</p>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">家里这几个号码</span><span class="meta">tap to call</span></div>
+        <ul class="tel-list">
+          <li><span class="tel-role">120 急救</span><a class="tel-num" href="tel:120">120</a></li>
+          <li><span class="tel-role">透析中心</span><a class="tel-num empty" id="telLinkDialysis" href="tel:">未设置</a></li>
+          <li><span class="tel-role">主治医生</span><a class="tel-num empty" id="telLinkDoctor" href="tel:">未设置</a></li>
+          <li><span class="tel-role">家属</span><a class="tel-num empty" id="telLinkFamily" href="tel:">未设置</a></li>
+        </ul>
+        <details class="edit">
+          <summary>填写 / 修改号码</summary>
+          <div class="field"><label for="telInDialysis">透析中心电话</label><input id="telInDialysis" type="tel" inputmode="tel" placeholder="填科室座机或手机号"></div>
+          <div class="field"><label for="telInDoctor">主治医生电话</label><input id="telInDoctor" type="tel" inputmode="tel" placeholder="填能直接找到人的号码"></div>
+          <div class="field"><label for="telInFamily">家属电话</label><input id="telInFamily" type="tel" inputmode="tel" placeholder="填主要陪护人号码"></div>
+          <div class="btn-row"><button class="btn" id="saveTels">保存号码</button></div>
+        </details>
+      </div>
+
+      <article class="card">
+        <div class="card-head"><span class="card-title">透析中低血糖</span><span class="sev">危</span></div>
+        <p class="sign"><b>看这些表现</b>　心慌、出冷汗、手抖、浑身发软、头晕、反应变慢、叫不太应</p>
+        <ol class="steps">
+          <li><b>正在透析机上：</b>马上叫透析室护士，不要自己处理。</li>
+          <li>告诉护士：老人有没有糖尿病、今天有没有吃降糖药或打胰岛素、最近一次血糖。</li>
+          <li><b>已下机或在家，人清醒：</b>先测血糖，低于 3.9 就补 15 克糖（葡萄糖片最稳，或小半杯糖水）。</li>
+          <li>15 分钟后复测，还低就再补一次；回升后少量吃点主食垫住。</li>
+          <li><b>人迷糊、叫不醒：</b>不要喂任何东西，侧躺，立刻打 120。</li>
+        </ol>
+        <div class="never"><span>do not</span><p>不要猛灌糖水；不要自己改降糖药；不要用香蕉、橘子、果汁救急，钾太高。</p></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="card-title">导管感染 · 寒战发热</span><span class="sev">危</span></div>
+        <p class="sign"><b>看这些表现</b>　打寒战、发烧、浑身酸痛；导管口发红、渗黄水、一按就疼</p>
+        <ol class="steps">
+          <li><b>透析时发冷发热：</b>立刻告诉当班护士，这是导管感染最典型的时机。</li>
+          <li><b>在家：</b>量体温、记下开始时间，当天联系透析中心，不要拖到第二天。</li>
+          <li>拍一张导管口的照片，给护士看，省得来回描述。</li>
+          <li>敷料湿了、松了、脏了，让护士换，不要自己拆。</li>
+        </ol>
+        <div class="never"><span>do not</span><p>不要挤脓、不要涂药膏、不要自己拔管；不要泡澡，淋浴也要贴防水膜。</p></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="card-title">导管滑脱 · 大出血</span><span class="sev">危</span></div>
+        <p class="sign"><b>这一条最急</b>　管口涌血、敷料很快浸透、管子被拽出</p>
+        <ol class="steps">
+          <li>拿干净纱布或毛巾，<b>持续用力压住</b>出血的出口。</li>
+          <li>压住不要松手，喊人帮忙打 120，另一只手压着。</li>
+          <li>让老人平躺，注意保暖，别让他自己坐起来看。</li>
+          <li>一路压到医院，交给急诊接手。</li>
+        </ol>
+        <div class="never"><span>do not</span><p>不要抬手查看止没止住；不要往管口里塞棉花、纸巾；不要自己把管子往回推。</p></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="card-title">内瘘出血 · 摸不到震颤</span><span class="sev">急</span></div>
+        <p class="sign"><b>看这些表现</b>　穿刺点渗血不止；手摸瘘管没有"嗡嗡"的震感</p>
+        <ol class="steps">
+          <li>纱布压住穿刺点，力度以<b>还能摸到震颤</b>为准。</li>
+          <li>压 10 到 15 分钟，中途不要反复松手。</li>
+          <li>止不住，或者摸不到震颤了，立刻去透析中心，内瘘堵了有时间窗。</li>
+        </ol>
+        <div class="never"><span>do not</span><p>不要在上臂死死勒止血带；不要热敷刚穿刺完的部位。</p></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="card-title">高钾危险 · 手脚发麻胸闷</span><span class="sev">危</span></div>
+        <p class="sign"><b>看这些表现</b>　嘴唇和手脚发麻、胸闷心慌、心跳不舒服、浑身没劲</p>
+        <ol class="steps">
+          <li>立刻停止一切进食进水，桌上饭菜水果都撤走。</li>
+          <li>马上联系透析中心；有胸闷、心跳乱，直接去急诊。</li>
+          <li>带上最近一次的血钾化验单。</li>
+        </ol>
+        <div class="never"><span>do not</span><p>不要吃偏方、不要喝汤；不要碰香蕉、橙子、土豆、菌菇、低钠盐。</p></div>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><span class="card-title">透析后低血压 · 起身发晕</span><span class="sev low">注意</span></div>
+        <p class="sign"><b>看这些表现</b>　下机后头晕、眼前发黑、出虚汗、站不稳</p>
+        <ol class="steps">
+          <li>就地坐下或平躺，把腿垫高一点，不要硬撑着走。</li>
+          <li>小口喝一点温水，不要一次灌一大杯。</li>
+          <li>休息 20 分钟还晕，联系透析室，别自己回家。</li>
+        </ol>
+        <div class="never"><span>do not</span><p>不要马上起身快走、不要洗热水澡、不要一次大量喝水。</p></div>
+      </article>
+    </section>
+
+    <!-- ========== 02 饮食 ========== -->
+    <section class="panel" id="panel-diet" role="tabpanel" aria-labelledby="tab-diet" hidden>
+      <div class="sec-head"><span class="sec-num">02</span><span class="sec-title">饮食速查</span><span class="sec-rule"></span></div>
+      <p class="sec-note">买菜做饭前扫一眼。化验单不一样，忌口也跟着变，听主管医生的。</p>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">去钾的做法，比忌口更管用</span><span class="meta">method</span></div>
+        <ol class="steps">
+          <li>蔬菜切薄片，<b>开水焯 3 分钟</b>，把水倒掉，再炒或凉拌。</li>
+          <li>土豆、红薯、山药切丝切片，先泡水 30 分钟再焯。</li>
+          <li>不喝菜汤、肉汤、火锅汤——钾都煮到汤里了。</li>
+          <li>水果少量、分次，不榨汁（一杯果汁顶好几个水果）。</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">尽量不吃</span><span class="meta">high potassium</span></div>
+        <span class="tag-no">高钾</span>
+        <ul class="foods">
+          <li><em>01</em><span>香蕉、橙子、橘子、猕猴桃、榴莲、牛油果</span></li>
+          <li><em>02</em><span>土豆、山药、芋头、红薯、南瓜（量大时）</span></li>
+          <li><em>03</em><span>香菇、金针菇、木耳、紫菜、海带</span></li>
+          <li><em>04</em><span>坚果、瓜子、花生、豆类</span></li>
+          <li><em>05</em><span>浓汤、鸡汤、骨头汤、火锅汤</span></li>
+          <li><em>06</em><span><b>低钠盐</b>（含钾，很多家庭都踩这个坑）</span></li>
+        </ul>
+        <p class="hint"><b>提醒：</b>血钾刚超标那几天，这一栏一口都别碰。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">限量吃</span><span class="meta">small portion</span></div>
+        <span class="tag-lim">控量</span>
+        <ul class="foods">
+          <li><em>01</em><span>苹果、梨、草莓、菠萝：一次一小块，不天天吃</span></li>
+          <li><em>02</em><span>番茄、黄瓜、冬瓜、丝瓜：焯水后再做</span></li>
+          <li><em>03</em><span>鸡蛋：一天最多一个，蛋黄别加量</span></li>
+          <li><em>04</em><span>瘦肉：少量，不吃肥肉和动物内脏</span></li>
+        </ul>
+        <p class="hint"><b>吃完留意：</b>手脚发麻、心慌，马上停。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">低血糖救急专用</span><span class="meta">low glucose only</span></div>
+        <span class="tag-ok">低钾 · 快吸收</span>
+        <ul class="foods">
+          <li><em>01</em><span><b>葡萄糖片 15 克</b>：液体少、钾低，首选</span></li>
+          <li><em>02</em><span>白糖冲水：小半杯，水越少越好</span></li>
+          <li><em>03</em><span>血糖回升后：一小片馒头或面包垫住</span></li>
+        </ul>
+        <p class="hint"><b>别用：</b>香蕉、橘子、果汁救急，升糖同时把钾也升上去。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">每天能喝多少水</span><span class="meta">fluid</span></div>
+        <ol class="steps">
+          <li>总量＝前一天尿量 ＋ 500 毫升（<b>以医生给的数为准</b>）。</li>
+          <li>粥、汤、水果、牛奶、输液以外的饮料，<b>全都算水</b>。</li>
+          <li>两次透析之间，体重增长不超过干体重的 5%。</li>
+          <li>口渴就含小块冰、漱漱口，别大口灌。</li>
+        </ol>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">高磷：痒、骨头痛</span><span class="meta">phosphate</span></div>
+        <ul class="foods">
+          <li><em>01</em><span>火腿肠、罐头、腊肉等加工肉</span></li>
+          <li><em>02</em><span>可乐、奶茶、碳酸饮料</span></li>
+          <li><em>03</em><span>巧克力、芝士、奶油</span></li>
+          <li><em>04</em><span>动物内脏、虾皮、坚果</span></li>
+        </ul>
+        <p class="hint"><b>磷结合剂：</b>跟着饭一起嚼着吃，饭后再吃等于没吃。</p>
+      </div>
+    </section>
+
+    <!-- ========== 03 记录 ========== -->
+    <section class="panel" id="panel-record" role="tabpanel" aria-labelledby="tab-record" hidden>
+      <div class="sec-head"><span class="sec-num">03</span><span class="sec-title">每日记录</span><span class="sec-rule"></span></div>
+      <p class="sec-note">早上称一次、量一次，两分钟。复诊时把记录导出来给医生看。</p>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">今天这一笔</span><span class="meta" id="todayLabel">today</span></div>
+        <div class="grid2">
+          <div class="field"><label for="recDate">日期</label><input id="recDate" type="date"></div>
+          <div class="field"><label for="recWeight">晨起体重 kg</label><input id="recWeight" inputmode="decimal" placeholder="60.2"></div>
+          <div class="field"><label for="recBp">血压 高/低</label><input id="recBp" inputmode="numeric" placeholder="140/80"></div>
+          <div class="field"><label for="recUrine">尿量 ml</label><input id="recUrine" inputmode="numeric" placeholder="300"></div>
+          <div class="field"><label for="recUf">本次超滤 L</label><input id="recUf" inputmode="decimal" placeholder="2.0"></div>
+        </div>
+
+        <div class="field">
+          <label for="recGlu">血糖 mmol/L</label>
+          <div class="glu-row">
+            <input id="recGlu" inputmode="decimal" placeholder="5.6">
+            <select id="recGluAt" aria-label="测血糖的时间点">
+              <option value="">测于</option>
+              <option value="空腹">空腹</option>
+              <option value="早餐后">早餐后</option>
+              <option value="透析前">透析前</option>
+              <option value="透析中">透析中</option>
+              <option value="透析后">透析后</option>
+              <option value="睡前">睡前</option>
+            </select>
+          </div>
+          <p class="glu-warn" id="gluWarn" hidden></p>
+        </div>
+
+        <div class="field"><label>今天有没有这些情况（可多选）</label>
+          <div class="chips" id="symptomChips">
+            <button class="chip" aria-pressed="false" data-sym="低血糖">低血糖</button>
+            <button class="chip" aria-pressed="false" data-sym="抽筋">抽筋</button>
+            <button class="chip" aria-pressed="false" data-sym="低血压">低血压</button>
+            <button class="chip" aria-pressed="false" data-sym="发热寒战">发热寒战</button>
+            <button class="chip" aria-pressed="false" data-sym="导管红肿">导管红肿</button>
+            <button class="chip" aria-pressed="false" data-sym="内瘘异常">内瘘异常</button>
+          </div>
+        </div>
+
+        <div class="field"><label for="recNote">备注</label><textarea id="recNote" placeholder="吃了什么、透析时的情况、有没有不舒服"></textarea></div>
+
+        <div class="btn-row">
+          <button class="btn" id="saveRec">保存这一笔</button>
+          <button class="btn quiet" id="clearForm">清空</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">历史记录</span><span class="meta" id="recCount">0 条</span></div>
+        <div id="recList"><p class="empty">还没有记录。填完点上面的保存。</p></div>
+        <div class="btn-row">
+          <button class="btn ghost" id="exportTxt">导出给医生</button>
+        </div>
+      </div>
+
+      <p class="disclaim">数据只存在这台手机的浏览器里，不上传网络。清理浏览器缓存会丢失，重要记录请定期导出备份。</p>
+    </section>
+
+    <!-- ========== 04 陪护 ========== -->
+    <section class="panel" id="panel-care" role="tabpanel" aria-labelledby="tab-care" hidden>
+      <div class="sec-head"><span class="sec-num">04</span><span class="sec-title">陪护工具</span><span class="sec-rule"></span></div>
+      <p class="sec-note">喂药、出门、复诊，三件最容易漏的事，都放这儿。</p>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">吃药清单</span><span class="meta" id="medCount">0 项</span></div>
+        <div id="medList"><p class="empty">还没有药。下面填一条加进来。</p></div>
+        <div class="field"><label for="medName">药名</label><input id="medName" placeholder="例：碳酸司维拉姆"></div>
+        <div class="grid2">
+          <div class="field"><label for="medTime">时间</label><input id="medTime" placeholder="早 8 点 / 随餐"></div>
+          <div class="field"><label for="medDose">剂量</label><input id="medDose" placeholder="1 片"></div>
+        </div>
+        <div class="field"><label for="medNote">注意</label><input id="medNote" placeholder="例：随餐嚼服，不要饭后再吃"></div>
+        <div class="btn-row"><button class="btn" id="addMed">加一条</button></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">透析排班</span><span class="meta">weekly</span></div>
+        <div class="week" id="weekChips">
+          <button aria-pressed="false" data-day="一">一</button>
+          <button aria-pressed="false" data-day="二">二</button>
+          <button aria-pressed="false" data-day="三">三</button>
+          <button aria-pressed="false" data-day="四">四</button>
+          <button aria-pressed="false" data-day="五">五</button>
+          <button aria-pressed="false" data-day="六">六</button>
+          <button aria-pressed="false" data-day="日">日</button>
+        </div>
+        <div class="field"><label for="schedTime">时段</label>
+          <select id="schedTime">
+            <option value="">选一个</option>
+            <option>上午</option><option>下午</option><option>晚上</option>
+          </select>
+        </div>
+        <p class="hint" id="schedEcho">还没选。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">出门打包</span><span class="meta">checklist</span></div>
+        <label class="check"><input type="checkbox" data-pack="透析卡、病历、化验单"><span>透析卡、病历、化验单</span></label>
+        <label class="check"><input type="checkbox" data-pack="葡萄糖片（防低血糖）"><span>葡萄糖片（防低血糖）</span></label>
+        <label class="check"><input type="checkbox" data-pack="外套或薄毯（透析怕冷）"><span>外套或薄毯（透析怕冷）</span></label>
+        <label class="check"><input type="checkbox" data-pack="水杯（少量水）"><span>水杯（少量水）</span></label>
+        <label class="check"><input type="checkbox" data-pack="口罩、纸巾"><span>口罩、纸巾</span></label>
+        <label class="check"><input type="checkbox" data-pack="手机、充电器"><span>手机、充电器</span></label>
+        <label class="check"><input type="checkbox" data-pack="降压药 / 磷结合剂"><span>降压药 / 磷结合剂</span></label>
+        <div class="btn-row"><button class="btn quiet" id="resetPack">全部取消勾选</button></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">下次复诊</span><span class="meta">visit</span></div>
+        <div class="grid2">
+          <div class="field"><label for="visitDate">日期</label><input id="visitDate" type="date"></div>
+          <div class="field"><label for="visitDept">科室 / 医生</label><input id="visitDept" placeholder="肾内科"></div>
+        </div>
+        <div class="field"><label for="visitQ">要问的问题</label><textarea id="visitQ" placeholder="例：这次血钾 5.8，降钾药要不要加？干体重是否调整？"></textarea></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">数据备份</span><span class="meta">backup</span></div>
+        <p class="hint" style="border-top:0;padding-top:0;margin-top:0">换手机、清缓存之前，先导出一份。文件里包含上面的号码、药单、排班、勾选和全部记录。</p>
+        <div class="btn-row">
+          <button class="btn ghost" id="exportJson">导出备份文件</button>
+          <button class="btn quiet" id="importBtn">导入备份</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <p class="hint" id="backupState">上次备份：没有</p>
+      </div>
+    </section>
+
+    <!-- ========== 05 说明 ========== -->
+    <section class="panel" id="panel-help" role="tabpanel" aria-labelledby="tab-help" hidden>
+      <div class="sec-head"><span class="sec-num">05</span><span class="sec-title">使用说明</span><span class="sec-rule"></span></div>
+
+      <div class="card">
+        <div class="card-head"><span class="card-title">要查资料，去这一页</span><span class="meta">knowledge</span></div>
+        <p class="hint" style="border-top:0;padding-top:0;margin-top:0">护理常识、问题排查，还有医院两张宣教海报上 <b>60 个二维码</b>的标题索引（22 条宣教 + 38 条药名），都在「照护知识」页。链接内容以医院原文为准。</p>
+        <div class="btn-row"><a class="btn" href="透析知识速查.html" style="text-decoration:none">打开照护知识</a></div>
+      </div>
+
+      <div class="card prose">
+        <h3>怎么装到手机桌面</h3>
+        <ol>
+          <li>用手机浏览器打开这个文件（微信里点开会受限，建议用系统浏览器）。</li>
+          <li>安卓：菜单里选「添加到主屏幕」。苹果：分享按钮里选「添加到主屏幕」。</li>
+          <li>以后桌面点图标就能开，不用联网。</li>
+        </ol>
+
+        <h3>五个板块分别干什么</h3>
+        <ul>
+          <li><b>应急：</b>出事的时候看，先看红标那几条。</li>
+          <li><b>饮食：</b>买菜做饭前看，记住"焯水去钾"和"汤也算水"。</li>
+          <li><b>记录：</b>每天两分钟，复诊导出来给医生。</li>
+          <li><b>陪护：</b>吃药、排班、打包、复诊，防忘事。</li>
+          <li><b>说明：</b>就是这一页。</li>
+          <li><b>知识：</b>单独一页，从上面那张卡片进去，也可以从封面进。</li>
+        </ul>
+
+        <h3>数据存在哪里</h3>
+        <p>只存在这台手机的浏览器本地，<b>不上传</b>。清理缓存、换手机、卸载浏览器会丢；重要记录在「陪护 · 数据备份」里导出文件保存好。</p>
+
+        <h3>日夜模式</h3>
+        <p>右上角按钮切换，会记住上次的选择。夜里陪护用暗色，不晃眼。</p>
+      </div>
+
+      <div class="disclaim">
+        <b>重要：</b>本卡只是家庭照护的辅助提醒，不能替代医生、护士的诊断和处置。任何用药调整、透析方案、化验判读，都以主管肾内科和透析中心的意见为准。出现大出血、意识不清、呼吸困难、持续胸痛，直接打 120。
+      </div>
+
+      <p class="hint" style="margin-top:14px">版本 2.0 · 数据格式 dialysis.v1</p>
+    </section>
+
+  </main>
+
+  <nav class="tabbar" role="tablist" aria-label="板块">
+    <button class="tab" id="tab-sos" role="tab" data-go="sos" aria-selected="true" aria-controls="panel-sos">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></svg>
+      <span class="lbl">应急</span>
+    </button>
+    <button class="tab" id="tab-diet" role="tab" data-go="diet" aria-selected="false" aria-controls="panel-diet">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,104h-8.37a88,88,0,0,0-175.26,0H32a8,8,0,0,0-8,8,104.35,104.35,0,0,0,56,92.28V208a16,16,0,0,0,16,16h64a16,16,0,0,0,16-16v-3.72A104.35,104.35,0,0,0,232,112,8,8,0,0,0,224,104Zm-24.46,0H148.12a71.84,71.84,0,0,1,41.27-29.57A71.45,71.45,0,0,1,199.54,104ZM173.48,56.23q2.75,2.25,5.27,4.75a87.92,87.92,0,0,0-49.15,43H100.1A72.26,72.26,0,0,1,168,56C169.83,56,171.66,56.09,173.48,56.23ZM128,40a71.87,71.87,0,0,1,19,2.57A88.36,88.36,0,0,0,83.33,104H56.46A72.08,72.08,0,0,1,128,40Zm36.66,152A8,8,0,0,0,160,199.3V208H96v-8.7A8,8,0,0,0,91.34,192a88.29,88.29,0,0,1-51-72H215.63A88.29,88.29,0,0,1,164.66,192Z"/></svg>
+      <span class="lbl">饮食</span>
+    </button>
+    <button class="tab" id="tab-record" role="tab" data-go="record" aria-selected="false" aria-controls="panel-record">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M184,112a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h64A8,8,0,0,1,184,112Zm-8,24H112a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm48-88V208a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32H208A16,16,0,0,1,224,48ZM48,208H72V48H48Zm160,0V48H88V208H208Z"/></svg>
+      <span class="lbl">记录</span>
+    </button>
+    <button class="tab" id="tab-care" role="tab" data-go="care" aria-selected="false" aria-controls="panel-care">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216.42,39.6a53.26,53.26,0,0,0-75.32,0L39.6,141.09a53.26,53.26,0,0,0,75.32,75.31h0L216.43,114.91A53.31,53.31,0,0,0,216.42,39.6ZM103.61,205.09h0a37.26,37.26,0,0,1-52.7-52.69L96,107.31,148.7,160ZM205.11,103.6,160,148.69,107.32,96l45.1-45.09a37.26,37.26,0,0,1,52.69,52.69ZM189.68,82.34a8,8,0,0,1,0,11.32l-24,24a8,8,0,1,1-11.31-11.32l24-24A8,8,0,0,1,189.68,82.34Z"/></svg>
+      <span class="lbl">陪护</span>
+    </button>
+    <button class="tab" id="tab-help" role="tab" data-go="help" aria-selected="false" aria-controls="panel-help">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z"/></svg>
+      <span class="lbl">说明</span>
+    </button>
+  </nav>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "dialysis.v1";
+  var state = {
+    theme: "light",
+    tels: { dialysis: "", doctor: "", family: "" },
+    records: [],
+    meds: [],
+    schedule: { days: [], time: "" },
+    packed: [],
+    visit: { date: "", dept: "", q: "" },
+    backupAt: ""
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){
+        var obj = JSON.parse(raw);
+        for(var k in obj){ if(Object.prototype.hasOwnProperty.call(obj,k)) state[k] = obj[k]; }
+      }
+    }catch(e){ /* 损坏就按默认走 */ }
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch(e){ toast("保存失败，浏览器可能禁用了本地存储"); }
+  }
+  function toast(msg){
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("on");
+    clearTimeout(toast.t);
+    toast.t = setTimeout(function(){ t.classList.remove("on"); }, 1900);
+  }
+  function pad(n){ return n < 10 ? "0" + n : "" + n; }
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+  }
+
+  /* ---------- 主题 ---------- */
+  function applyTheme(){
+    var dark = state.theme === "dark";
+    document.body.classList.toggle("dark", dark);
+    $("themeBtn").setAttribute("aria-label", dark ? "切换日间模式" : "切换夜间模式");
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#091614" : "#16302B");
+  }
+  $("themeBtn").addEventListener("click", function(){
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    applyTheme(); save();
+  });
+
+  /* ---------- tab 切换 ---------- */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+  var panels = Array.prototype.slice.call(document.querySelectorAll(".panel"));
+  function go(name){
+    tabs.forEach(function(b){
+      var on = b.dataset.go === name;
+      b.setAttribute("aria-selected", String(on));
+    });
+    panels.forEach(function(p){
+      p.hidden = p.id !== "panel-" + name;
+    });
+    state.lastTab = name; save();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  tabs.forEach(function(b){ b.addEventListener("click", function(){ go(b.dataset.go); }); });
+
+  /* ---------- 电话 ---------- */
+  function renderTels(){
+    var map = [["telLinkDialysis","dialysis"],["telLinkDoctor","doctor"],["telLinkFamily","family"]];
+    map.forEach(function(pair){
+      var el = $(pair[0]), val = state.tels[pair[1]] || "";
+      if(val){
+        el.textContent = val;
+        el.href = "tel:" + val.replace(/\s/g,"");
+        el.classList.remove("empty");
+      }else{
+        el.textContent = "去填写";
+        el.href = "tel:";
+        el.classList.add("empty");
+      }
+    });
+    $("telInDialysis").value = state.tels.dialysis || "";
+    $("telInDoctor").value = state.tels.doctor || "";
+    $("telInFamily").value = state.tels.family || "";
+  }
+  $("saveTels").addEventListener("click", function(){
+    state.tels = {
+      dialysis: $("telInDialysis").value.trim(),
+      doctor: $("telInDoctor").value.trim(),
+      family: $("telInFamily").value.trim()
+    };
+    save(); renderTels();
+    toast("号码已保存");
+    this.closest("details").open = false;
+  });
+
+  /* ---------- 症状 chips ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll("#symptomChips .chip"));
+  chips.forEach(function(c){
+    c.addEventListener("click", function(){
+      c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    });
+  });
+  function chosenSymptoms(){
+    return chips.filter(function(c){ return c.getAttribute("aria-pressed") === "true"; })
+                .map(function(c){ return c.dataset.sym; });
+  }
+
+  /* ---------- 记录 ---------- */
+  function renderRecords(){
+    var list = $("recList");
+    if(!state.records.length){
+      list.innerHTML = '<p class="empty">还没有记录。填完点上面的保存。</p>';
+    }else{
+      var html = state.records.slice().reverse().map(function(r, i){
+        var idx = state.records.length - 1 - i;
+        var vals = [];
+        var w = r.wPre || r.weight;
+        if(w) vals.push('<i>WT</i>' + w);
+        if(r.bp) vals.push('<i>BP</i>' + r.bp);
+        if(r.glu){
+          var lowG = parseFloat(r.glu) < 3.9;
+          vals.push('<i>GLU</i><span class="' + (lowG ? "glu-low" : "") + '">' + r.glu + (r.gluAt ? '<em class="glu-tag">' + esc(r.gluAt) + '</em>' : "") + (lowG ? ' ←低' : '') + '</span>');
+        }
+        if(r.urine) vals.push('<i>UR</i>' + r.urine);
+        if(r.uf) vals.push('<i>UF</i>' + r.uf);
+        var tags = (r.symptoms || []).map(function(s){ return "<span>" + s + "</span>"; }).join("");
+        return '<div class="rec">' +
+          '<div class="rec-top"><span class="rec-date">' + (r.date || "未填日期") + '</span>' +
+          '<button class="x" data-del="' + idx + '">删除</button></div>' +
+          (vals.length ? '<p class="rec-vals">' + vals.join("　") + '</p>' : "") +
+          (tags ? '<div class="rec-tags">' + tags + '</div>' : "") +
+          (r.note ? '<p class="rec-note">' + esc(r.note) + '</p>' : "") +
+        '</div>';
+      }).join("");
+      list.innerHTML = html;
+      Array.prototype.forEach.call(list.querySelectorAll("[data-del]"), function(btn){
+        btn.addEventListener("click", function(){
+          var i = parseInt(btn.dataset.del, 10);
+          if(confirm("删除这一条记录？")){
+            state.records.splice(i,1); save(); renderRecords();
+            toast("已删除");
+          }
+        });
+      });
+    }
+    $("recCount").textContent = state.records.length + " 条";
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
+    });
+  }
+  $("saveRec").addEventListener("click", function(){
+    var date = $("recDate").value || todayStr();
+    var rec = {
+      date: date,
+      weight: $("recWeight").value.trim(),
+      wPre: $("recWeight").value.trim(),
+      bp: $("recBp").value.trim(),
+      glu: $("recGlu").value.trim(),
+      gluAt: $("recGluAt").value,
+      urine: $("recUrine").value.trim(),
+      uf: $("recUf").value.trim(),
+      symptoms: chosenSymptoms(),
+      note: $("recNote").value.trim()
+    };
+    if(!rec.weight && !rec.bp && !rec.glu && !rec.note && !rec.symptoms.length){
+      toast("至少填一项再保存"); return;
+    }
+    state.records.push(rec);
+    save(); renderRecords(); clearForm();
+    toast("记下了");
+    if(state.records.length === 1) go("record");
+  });
+  function clearForm(){
+    ["recWeight","recBp","recGlu","recUrine","recUf","recNote"].forEach(function(id){ $(id).value = ""; });
+    $("recGluAt").value = "";
+    syncGluWarn();
+    chips.forEach(function(c){ c.setAttribute("aria-pressed","false"); });
+  }
+  function syncGluWarn(){
+    var v = parseFloat($("recGlu").value);
+    var w = $("gluWarn");
+    if(!isNaN(v) && v > 0 && v < 3.9){
+      w.innerHTML = "<b>低于 3.9，是低血糖。</b>人清醒：补 15 g 葡萄糖片或少量糖水，15 分钟后复测。人迷糊、叫不醒：侧躺、别喂、打 120。不要用香蕉、橘子、果汁救急，钾太高。";
+      w.hidden = false;
+      $("recGlu").classList.add("glu-low-num");
+    }else{
+      w.hidden = true; w.textContent = "";
+      $("recGlu").classList.remove("glu-low-num");
+    }
+  }
+  $("recGlu").addEventListener("input", syncGluWarn);
+  $("recGlu").addEventListener("change", syncGluWarn);
+
+  $("clearForm").addEventListener("click", function(){ clearForm(); toast("已清空"); });
+
+  $("exportTxt").addEventListener("click", function(){
+    if(!state.records.length){ toast("还没有记录"); return; }
+    var lines = ["透析家庭照护记录", "导出时间：" + new Date().toLocaleString("zh-CN"), ""];
+    state.records.forEach(function(r){
+      lines.push("————————");
+      lines.push("日期：" + r.date);
+      lines.push("体重：" + ((r.wPre || r.weight) || "-") + " kg　血压：" + (r.bp || "-"));
+      var g = r.glu ? (r.glu + " mmol/L" + (r.gluAt ? "（" + r.gluAt + "）" : "") + (parseFloat(r.glu) < 3.9 ? " ← 低血糖" : "")) : "-";
+      lines.push("血糖：" + g + "　尿量：" + (r.urine || "-") + " ml　超滤：" + (r.uf || "-") + " L");
+      if(r.symptoms && r.symptoms.length) lines.push("情况：" + r.symptoms.join("、"));
+      if(r.note) lines.push("备注：" + r.note);
+      lines.push("");
+    });
+    download("透析记录_" + todayStr() + ".txt", lines.join("\r\n"), "text/plain");
+    toast("已导出文本，可以发给医生");
+  });
+
+  /* ---------- 服药 ---------- */
+  function renderMeds(){
+    var box = $("medList");
+    if(!state.meds.length){
+      box.innerHTML = '<p class="empty">还没有药。下面填一条加进来。</p>';
+    }else{
+      box.innerHTML = state.meds.map(function(m, i){
+        return '<div class="med"><span class="med-time">' + esc(m.time || "—") + '</span>' +
+          '<div class="med-main">' + esc(m.name) + '<small>' + esc(m.dose || "") + (m.note ? " · " + esc(m.note) : "") + '</small></div>' +
+          '<button class="x" data-med="' + i + '">删除</button></div>';
+      }).join("");
+      Array.prototype.forEach.call(box.querySelectorAll("[data-med]"), function(b){
+        b.addEventListener("click", function(){
+          state.meds.splice(parseInt(b.dataset.med,10),1); save(); renderMeds(); toast("已删除");
+        });
+      });
+    }
+    $("medCount").textContent = state.meds.length + " 项";
+  }
+  $("addMed").addEventListener("click", function(){
+    var name = $("medName").value.trim();
+    if(!name){ toast("先写药名"); return; }
+    state.meds.push({
+      name: name,
+      time: $("medTime").value.trim(),
+      dose: $("medDose").value.trim(),
+      note: $("medNote").value.trim()
+    });
+    save(); renderMeds();
+    ["medName","medTime","medDose","medNote"].forEach(function(id){ $(id).value = ""; });
+    toast("加好了");
+  });
+
+  /* ---------- 排班 ---------- */
+  var weekBtns = Array.prototype.slice.call(document.querySelectorAll("#weekChips button"));
+  function renderSchedule(){
+    weekBtns.forEach(function(b){
+      b.setAttribute("aria-pressed", state.schedule.days.indexOf(b.dataset.day) >= 0 ? "true" : "false");
+    });
+    $("schedTime").value = state.schedule.time || "";
+    var echo = $("schedEcho");
+    if(state.schedule.days.length){
+      echo.innerHTML = "<b>排班：</b>每周" + state.schedule.days.map(function(d){ return d === "日" ? "日" : d; }).join("、") +
+        (state.schedule.time ? "　" + state.schedule.time : "");
+    }else{
+      echo.textContent = "还没选。";
+    }
+  }
+  weekBtns.forEach(function(b){
+    b.addEventListener("click", function(){
+      var d = b.dataset.day;
+      var i = state.schedule.days.indexOf(d);
+      if(i >= 0) state.schedule.days.splice(i,1); else state.schedule.days.push(d);
+      state.schedule.days.sort(function(a,b2){
+        var order = "一二三四五六日";
+        return order.indexOf(a) - order.indexOf(b2);
+      });
+      save(); renderSchedule();
+    });
+  });
+  $("schedTime").addEventListener("change", function(){
+    state.schedule.time = this.value; save(); renderSchedule();
+  });
+
+  /* ---------- 打包 ---------- */
+  var packs = Array.prototype.slice.call(document.querySelectorAll("[data-pack]"));
+  function renderPacks(){
+    packs.forEach(function(p){
+      p.checked = (state.packed || []).indexOf(p.dataset.pack) >= 0;
+    });
+  }
+  packs.forEach(function(p){
+    p.addEventListener("change", function(){
+      var list = state.packed || [];
+      var key = p.dataset.pack;
+      var i = list.indexOf(key);
+      if(p.checked && i < 0) list.push(key);
+      if(!p.checked && i >= 0) list.splice(i,1);
+      state.packed = list; save();
+    });
+  });
+  $("resetPack").addEventListener("click", function(){
+    state.packed = []; save(); renderPacks(); toast("已清空，下次出门重新勾");
+  });
+
+  /* ---------- 复诊 ---------- */
+  ["visitDate","visitDept","visitQ"].forEach(function(id){
+    $(id).addEventListener("change", function(){
+      state.visit = {
+        date: $("visitDate").value,
+        dept: $("visitDept").value.trim(),
+        q: $("visitQ").value.trim()
+      };
+      save();
+    });
+  });
+  function renderVisit(){
+    $("visitDate").value = state.visit.date || "";
+    $("visitDept").value = state.visit.dept || "";
+    $("visitQ").value = state.visit.q || "";
+  }
+
+  /* ---------- 备份 ---------- */
+  function download(name, content, type){
+    var blob = new Blob([content], { type: type + ";charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  }
+  $("exportJson").addEventListener("click", function(){
+    state.backupAt = new Date().toLocaleString("zh-CN");
+    download("透析陪护备份_" + todayStr() + ".json", JSON.stringify(state, null, 2), "application/json");
+    save(); renderBackup();
+    toast("备份文件已导出");
+  });
+  $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
+  $("importFile").addEventListener("change", function(){
+    var f = this.files && this.files[0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var obj = JSON.parse(String(reader.result));
+        if(!obj || !obj.records && !obj.tels){ throw new Error("格式不对"); }
+        state = Object.assign(state, obj);
+        save(); renderAll();
+        toast("备份已导入");
+      }catch(e){
+        toast("这个文件读不出来，确认是导出的备份");
+      }
+      $("importFile").value = "";
+    };
+    reader.readAsText(f, "utf-8");
+  });
+  function renderBackup(){
+    $("backupState").innerHTML = state.backupAt ? "上次备份：" + esc(state.backupAt) : "上次备份：没有";
+  }
+
+  /* ---------- 初始化 ---------- */
+  function renderAll(){
+    applyTheme();
+    renderTels();
+    renderRecords();
+    renderMeds();
+    renderSchedule();
+    renderPacks();
+    renderVisit();
+    renderBackup();
+    $("recDate").value = todayStr();
+    $("todayLabel").textContent = new Date().toLocaleDateString("zh-CN", { month:"2-digit", day:"2-digit" });
+    if(state.lastTab) go(state.lastTab);
+  }
+
+  load();
+  renderAll();
+})();
+</script>
+</body>
+</html>

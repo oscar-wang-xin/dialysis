@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-"""构建单文件成品 index.html。
+"""构建「透析家庭照护工具包」的 6 张离线页面。
 
 用法：  python tools/build.py
-源码：  src/shell.html + src/app.css + src/app.js + data/*.json
-产物：  index.html（提交进仓库，双击即用，零外部依赖）
+模板：  src/*.tpl.html（以「透析」目录下那套工具为模板基线）
+数据：  data/qr-links.json + data/link-titles.json + data/knowledge.json
+产物：  仓库根目录 6 个自包含 HTML，双击即用、零外部依赖、可整目录拷到手机
 
-构建时会做四类自检：外部资源引用、脚本闭合、链接条数、隐私关键词。
+自检：外部资源引用、脚本闭合、占位符、数据完整性、页面间链接、隐私关键词。
 任何一项不过就不写产物。
 """
+import html
 import json
 import re
 import sys
@@ -18,17 +20,35 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'src'
 DATA = ROOT / 'data'
-OUT = ROOT / 'index.html'
 
-# 只放「具体可识别的真实数据」，不放「病历号 / 身份证号」这类通用字段名，
+PAGES = {
+    'index.tpl.html':     'index.html',
+    'card.tpl.html':      '透析陪护综合卡.html',
+    'sos.tpl.html':       '透析应急速查卡.html',
+    'daily.tpl.html':     '透析每日记录.html',
+    'knowledge.tpl.html': '透析知识速查.html',
+    'guide.tpl.html':     '透析使用说明.html',
+}
+
+# 只放具体可识别的真实数据，不放「病历号 / 身份证号」这类通用字段名，
 # 否则 PRIVACY.md 里提醒别人别提交的文字会把自己误报成泄密。
 PRIVACY_BANNED = [
     '王一平', '77 岁', '67 kg', '干体重 67', '剩约 40 分钟',
 ]
 
+PLACEHOLDERS = [
+    'DATA_CARDS', 'DATA_TRIAGE', 'DATA_CHECKLIST',
+    'DATA_LINKS_TREE', 'DATA_LINKS_DRUG',
+    'DATA_OPENHINT', 'DATA_SOURCENOTE', 'DATA_UNCERTAIN', 'DATA_DISCLAIMER',
+]
+
 
 def read(p):
     return p.read_text(encoding='utf-8')
+
+
+def esc(s):
+    return html.escape(str(s), quote=True)
 
 
 def ordered_links(items, row_gap=60, titles=None):
@@ -49,50 +69,143 @@ def ordered_links(items, row_gap=60, titles=None):
                 'title': (titles[n - 1] if titles and n <= len(titles) else ''),
                 'url': url,
                 'host': urlparse(url).netloc,
-                'x': item['x'],
-                'y': item['y'],
             })
     return out
 
 
-def self_check(html, css, js, app):
-    problems = []
+# ---------------- 知识页片段 ----------------
 
-    # 1. 零外部资源：不允许 script/link 外链、@import、外部字体/脚本 URL
-    if re.search(r'<script[^>]+src\s*=|@import', html):
-        problems.append('存在外部 script 或 @import')
-    for m in re.finditer(r'<link[^>]+href\s*=\s*"([^"]+)', html):
+def cards_html(kn):
+    out = []
+    for i, c in enumerate(kn['cards'], 1):
+        plain = ' '.join([c['title'], c['body'], c['ask']])
+        out.append(
+            '<details class="fold" data-s="%s">\n'
+            '  <summary><span class="idx">%02d</span><span>%s</span></summary>\n'
+            '  <p class="body">%s</p>\n'
+            '  <p class="ask"><b>该问医生：</b>%s</p>\n'
+            '</details>' % (esc(plain), i, esc(c['title']), esc(c['body']), esc(c['ask']))
+        )
+    return '\n'.join(out)
+
+
+def triage_html(kn):
+    out = []
+    for t in kn['triage']:
+        plain = ' '.join([t['title']] + t['items'] + [t['steps'], t['call']])
+        items = ''.join('<li>%s</li>' % esc(x) for x in t['items'])
+        out.append(
+            '<div class="card lv %s" data-s="%s">\n'
+            '  <div class="card-head"><h3>%s</h3></div>\n'
+            '  <ul>%s</ul>\n'
+            '  <p class="step"><b>怎么做：</b>%s</p>\n'
+            '  <span class="calltag">%s</span>\n'
+            '</div>' % (esc(t['level']), esc(plain), esc(t['title']), items,
+                        esc(t['steps']), esc(t['call']))
+        )
+    return '\n'.join(out)
+
+
+def checklist_html(kn):
+    rows = []
+    for c in kn['checklists']:
+        plain = ' '.join([c['sign'], c['first'], c['call']])
+        rows.append(
+            '<tr data-s="%s"><td>%s</td><td>%s</td><td>%s</td></tr>' %
+            (esc(plain), esc(c['sign']), esc(c['first']), esc(c['call']))
+        )
+    return (
+        '<table class="chk"><thead><tr>'
+        '<th>看到什么</th><th>先记什么 / 做什么</th><th>联系谁</th>'
+        '</tr></thead><tbody>\n' + '\n'.join(rows) + '\n</tbody></table>'
+    )
+
+
+def links_html(items, group, uncertain):
+    out = []
+    for it in items:
+        key = '%s-%d' % (group, it['no'])
+        doubt = '<span class="doubt">存疑</span>' if key in uncertain else ''
+        plain = '%s %02d %s %s' % (it['title'], it['no'], it['url'], it['host'])
+        out.append(
+            '<li data-s="%s">\n'
+            '  <a class="lnk" href="%s" target="_blank" rel="noopener noreferrer">\n'
+            '    <div class="lt">%s%s</div>\n'
+            '    <div class="lm"><span class="no">%02d</span>%s<span class="go">↗</span></div>\n'
+            '  </a>\n'
+            '</li>' % (esc(plain), esc(it['url']), esc(it['title']), doubt,
+                       it['no'], esc(it['host']))
+        )
+    return '\n'.join(out)
+
+
+def uncertain_html(titles):
+    out = []
+    for key, note in sorted(titles['_uncertain'].items()):
+        out.append(
+            '<details class="fold" data-s="%s">\n'
+            '  <summary><span class="idx">%s</span><span>%s</span></summary>\n'
+            '  <p class="body">%s</p>\n'
+            '</details>' % (esc(key + ' ' + note), esc(key),
+                            '第 %s 条标题待对照原图' % esc(key), esc(note))
+        )
+    return '\n'.join(out)
+
+
+# ---------------- 自检 ----------------
+
+def self_check(outputs, app):
+    problems = []
+    all_html = '\n'.join(outputs.values())
+
+    # 1. 零外部资源依赖：不能有自动加载的外部脚本/样式/字体/图片
+    if re.search(r'<script[^>]+src\s*=', all_html, re.I):
+        problems.append('存在外部 script')
+    if re.search(r'@import', all_html, re.I):
+        problems.append('存在 @import')
+    for m in re.finditer(r'<link[^>]+href\s*=\s*"([^"]+)', all_html, re.I):
         if not m.group(1).startswith('data:'):
             problems.append('存在外部 link：' + m.group(1)[:48])
-    if re.search(r'https?://[^\s"\'<>]+?\.(css|js|woff2?|ttf)(\b|$)', html):
+    if re.search(r'https?://[^\s"\'<>]+?\.(css|js|woff2?|ttf)(\b|$)', all_html, re.I):
         problems.append('存在外部 css / js / 字体 URL')
-    if 'fetch(' in js or 'XMLHttpRequest' in js or 'navigator.sendBeacon' in js:
-        problems.append('应用逻辑里出现了网络请求调用')
+    if re.search(r'\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon', all_html):
+        problems.append('页面里出现了网络请求调用')
+    if re.search(r'<img[^>]+src\s*=\s*["\']https?://', all_html, re.I):
+        problems.append('存在外部图片')
 
-    # 2. 脚本闭合：内联脚本里不能出现字面 </script>
-    if '</script' in js.lower() or '</script' in css.lower():
-        problems.append('内联样式/脚本里含 </script，会截断 HTML')
-
-    # 3. 占位符必须全部替换
-    for token in ('/*__CSS__*/', '/*__JS__*/', '/*__DATA__*/'):
-        if token in html:
+    # 2. 占位符必须全部替换
+    for token in PLACEHOLDERS:
+        if '<!--' + token + '-->' in all_html:
             problems.append('占位符未替换：' + token)
 
-    # 4. 知识数据完整性
+    # 3. 数据完整性
     if len(app['links']['drug']) != 38:
         problems.append('药物链接应为 38 条，实际 %d' % len(app['links']['drug']))
     if len(app['links']['tree']) != 22:
         problems.append('宣教链接应为 22 条，实际 %d' % len(app['links']['tree']))
-    if len(app['cards']) < 6 or len(app['triage']) != 3:
-        problems.append('常识卡或分级数据不完整')
+    if len(app['cards']) != 9 or len(app['triage']) != 3 or len(app['checklists']) != 5:
+        problems.append('常识卡 / 分级 / 排查清单数量不完整')
     for key in ('drug', 'tree'):
         if any(not str(x.get('title', '')).strip() for x in app['links'][key]):
             problems.append('%s 链接存在缺标题的条目' % key)
 
-    # 5. 隐私：全仓库文本不得出现真实患者信息
+    # 4. 页面间相对链接必须指向真实存在的成品
+    for name, text in outputs.items():
+        for m in re.finditer(r'href="([^"#:]+?\.html)"', text):
+            target = m.group(1)
+            if target not in outputs:
+                problems.append('%s 引用了不存在的页面：%s' % (name, target))
+
+    # 5. 脚本闭合粗检
+    for name, text in outputs.items():
+        if text.count('<script') != text.count('</script>'):
+            problems.append('%s 的 script 标签数量不匹配' % name)
+        if text.count('<style') != text.count('</style>'):
+            problems.append('%s 的 style 标签数量不匹配' % name)
+
+    # 6. 隐私：全仓库文本不得出现真实患者信息
     hit = []
     for p in sorted(ROOT.rglob('*')):
-        # build.py 自身保存了违禁词清单，跳过，否则会命中自己
         if not p.is_file() or p.name.startswith('_patch_') or p.name == 'build.py':
             continue
         if p.suffix.lower() not in ('.html', '.css', '.js', '.json', '.md', '.py', '.txt', ''):
@@ -113,59 +226,63 @@ def self_check(html, css, js, app):
 
 
 def main():
-    shell = read(SRC / 'shell.html')
-    css = read(SRC / 'app.css')
-    js = read(SRC / 'app.js')
     qr = json.loads(read(DATA / 'qr-links.json'))
     kn = json.loads(read(DATA / 'knowledge.json'))
     titles = json.loads(read(DATA / 'link-titles.json'))
+
     if len(titles['drug']) != 38 or len(titles['tree']) != 22:
         print('构建中止：海报标题应为 38 / 22 条')
         return 1
 
     app = {
-        'version': 1,
         'generated': date.today().isoformat(),
         'source': kn['source'],
-        'groups': kn['groups'],
         'cards': kn['cards'],
         'triage': kn['triage'],
         'checklists': kn['checklists'],
-        'symptoms': kn['symptoms'],
-        'labNames': kn['labNames'],
-        'dailyTypes': kn['dailyTypes'],
-        'glucoseTags': kn['glucoseTags'],
-        'disclaimer': kn['disclaimer'],
         'links': {
             'drug': ordered_links(qr['drug'], 60, titles['drug']),
             'tree': ordered_links(qr['tree'], 60, titles['tree']),
         },
     }
 
-    payload = json.dumps(app, ensure_ascii=False, separators=(',', ':'))
-    # 避免数据里的 < 被 HTML 解析器当成标签起始
-    payload = payload.replace('<', '\\u003c')
+    outputs = {}
+    for tpl, target in PAGES.items():
+        text = read(SRC / tpl)
+        if tpl == 'knowledge.tpl.html':
+            text = (text
+                    .replace('<!--DATA_CARDS-->', cards_html(kn))
+                    .replace('<!--DATA_TRIAGE-->', triage_html(kn))
+                    .replace('<!--DATA_CHECKLIST-->', checklist_html(kn))
+                    .replace('<!--DATA_LINKS_TREE-->',
+                             links_html(app['links']['tree'], 'tree', titles['_uncertain']))
+                    .replace('<!--DATA_LINKS_DRUG-->',
+                             links_html(app['links']['drug'], 'drug', titles['_uncertain']))
+                    .replace('<!--DATA_OPENHINT-->', esc(kn['source']['openHint']))
+                    .replace('<!--DATA_SOURCENOTE-->', esc(titles['_source']))
+                    .replace('<!--DATA_UNCERTAIN-->', uncertain_html(titles))
+                    .replace('<!--DATA_DISCLAIMER-->', esc(kn['disclaimer'])))
+        outputs[target] = text
 
-    html = (shell
-            .replace('/*__CSS__*/', css)
-            .replace('/*__DATA__*/', payload)
-            .replace('/*__JS__*/', js))
-
-    problems = self_check(html, css, js, app)
+    problems = self_check(outputs, app)
     if problems:
         print('构建中止，自检未通过：')
         for p in problems:
             print('  - ' + p)
         return 1
 
-    OUT.write_text(html, encoding='utf-8', newline='\n')
-    print('构建完成：%s' % OUT)
-    print('  大小      %.1f KB' % (OUT.stat().st_size / 1024))
-    print('  宣教链接  %d 条' % len(app['links']['tree']))
-    print('  药物链接  %d 条' % len(app['links']['drug']))
-    print('  标题      %d 条（海报逐块辨认）' % (len(titles['drug']) + len(titles['tree'])))
-    print('  常识卡    %d 张' % len(app['cards']))
-    print('  自检      外部资源 / 脚本闭合 / 数据完整性 / 隐私关键词  全部通过')
+    for name, text in outputs.items():
+        (ROOT / name).write_text(text, encoding='utf-8', newline='\n')
+
+    total = sum((ROOT / n).stat().st_size for n in outputs)
+    print('构建完成：%d 张离线页面，共 %.1f KB' % (len(outputs), total / 1024))
+    for name in outputs:
+        print('  - %-22s %6.1f KB' % (name, (ROOT / name).stat().st_size / 1024))
+    print('  宣教链接  %d 条 / 药物链接  %d 条（标题逐块辨认，%d 条存疑已标注）' %
+          (len(app['links']['tree']), len(app['links']['drug']), len(titles['_uncertain'])))
+    print('  常识卡    %d 张 / 分级排查 %d 级 / 问题清单 %d 条' %
+          (len(app['cards']), len(app['triage']), len(app['checklists'])))
+    print('  自检      外部资源 / 占位符 / 数据完整性 / 页面链接 / 脚本闭合 / 隐私  全部通过')
     return 0
 
 

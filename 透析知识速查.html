@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>透析照护知识 · 宣教与用药索引</title>
+<meta name="theme-color" content="#16302B">
+<style>
+/* 与综合卡同一套设计变量：暖纸底 + 生理盐水青 + 碘伏砖红 */
+:root{
+  --canvas:#F4F1E9;--canvas-2:#EAE5D7;--surface:#FFFCF5;--surface-2:#F8F3E7;
+  --world:#16302B;--accent:#1F6E63;--accent-soft:#DFEDE8;
+  --ink:#1A1E1C;--muted:#6E736B;--line:#D8D2C2;--alert:#9E3A2C;--alert-soft:#F2E2DB;
+  --r-shell:22px;--r-card:8px;--r-ctl:6px;--r-pill:999px;
+  --shadow-card:0 1px 2px rgba(22,48,43,.05),0 8px 20px -8px rgba(22,48,43,.12),0 26px 48px -28px rgba(22,48,43,.18);
+  --f-display:"Songti SC","Source Han Serif SC","Noto Serif SC","SimSun",Georgia,serif;
+  --f-body:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,sans-serif;
+  --f-num:ui-monospace,"SF Mono","Consolas","Roboto Mono",monospace;
+}
+body.dark{
+  color-scheme:dark;
+  --canvas:#0C1214;--canvas-2:#080D0F;--surface:#141D1F;--surface-2:#182225;
+  --world:#091614;--accent:#5AA99A;--accent-soft:#17302C;
+  --ink:#E8E5DA;--muted:#94A09B;--line:#263133;--alert:#D97261;--alert-soft:#2A1A17;
+  --shadow-card:0 1px 0 rgba(255,255,255,.04) inset,0 8px 22px -10px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--canvas);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.62;padding-bottom:44px;transition:background-color .25s ease,color .25s ease}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.shell{max-width:520px;margin:0 auto;min-height:100vh;background:var(--canvas)}
+
+.hero{
+  position:relative;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 46px),
+    radial-gradient(120% 90% at 88% 0%,rgba(90,169,154,.22) 0%,transparent 62%),
+    var(--world);
+  color:#F3EFE4;padding:calc(18px + env(safe-area-inset-top)) 20px 24px;
+  border-radius:0 0 var(--r-shell) var(--r-shell);overflow:hidden;
+}
+.hero-bar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mark{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(243,239,228,.62);font-family:var(--f-num)}
+.hero-tools{display:flex;gap:8px;align-items:center}
+.iconbtn{
+  width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;
+  border:1px solid rgba(243,239,228,.22);border-radius:var(--r-ctl);
+  background:rgba(243,239,228,.06);color:#F3EFE4;cursor:pointer;text-decoration:none;
+}
+.iconbtn svg{width:20px;height:20px}
+.hero h1{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,8.4vw,38px);line-height:1.12;letter-spacing:.01em;margin:14px 0 6px}
+.hero-sub{font-size:14.5px;color:rgba(243,239,228,.72);max-width:22em}
+.hero-foot{margin-top:18px;border-top:1px solid rgba(243,239,228,.16);padding-top:13px;font-size:12.5px;line-height:1.6;color:rgba(243,239,228,.62)}
+.hero-foot b{color:#F3EFE4}
+
+main{padding:0 16px 8px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px}
+.sec-num{font-family:var(--f-num);font-size:11px;letter-spacing:.12em;color:var(--accent)}
+.sec-title{font-size:20px;font-weight:700;letter-spacing:.01em}
+.sec-rule{flex:1;height:1px;background:var(--line);transform:translateY(-3px)}
+.sec-note{font-size:13px;color:var(--muted);margin:-4px 0 14px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px 16px 15px;margin-bottom:12px;box-shadow:var(--shadow-card)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.card-title{font-size:17.5px;font-weight:700;letter-spacing:.01em}
+.meta{font-family:var(--f-num);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+
+/* 搜索 */
+.search{position:relative;margin-top:18px}
+.search input{
+  width:100%;font-family:var(--f-body);font-size:16px;color:var(--ink);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);
+  padding:12px 42px 12px 18px;box-shadow:var(--shadow-card);
+}
+.search input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.search .clr{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:36px;height:36px;display:none;place-items:center;border:0;background:transparent;
+  color:var(--muted);font-size:19px;cursor:pointer;border-radius:var(--r-pill);
+}
+.search .clr.on{display:grid}
+.search-echo{font-size:13px;color:var(--muted);margin-top:8px;padding-left:4px}
+
+/* 折叠式常识卡 */
+details.fold{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:13px 15px;margin-bottom:9px;box-shadow:var(--shadow-card)}
+details.fold summary{cursor:pointer;font-size:16px;font-weight:600;list-style:none;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary::before{content:"＋";font-family:var(--f-num);color:var(--accent);font-size:15px;flex:0 0 auto}
+details.fold[open] summary::before{content:"－"}
+details.fold .body{font-size:14.5px;color:var(--muted);margin-top:10px;line-height:1.7;padding-left:24px}
+details.fold .ask{margin-top:9px;padding-left:24px;font-size:13.5px;color:var(--accent);line-height:1.6}
+details.fold .ask b{font-weight:700}
+.idx{font-family:var(--f-num);font-size:11px;color:var(--muted);letter-spacing:.08em}
+
+/* 三级排查 */
+.lv{border-left:3px solid var(--line)}
+.lv.red{border-left-color:var(--alert)}
+.lv.amber{border-left-color:#B07B2C}
+.lv.green{border-left-color:var(--accent)}
+.lv .card-head{margin-bottom:8px}
+.lv h3{font-size:16.5px;font-weight:700;line-height:1.45}
+.lv.red h3{color:var(--alert)}
+.lv ul{list-style:none;padding-left:0}
+.lv li{position:relative;padding-left:18px;font-size:14.5px;color:var(--muted);margin:5px 0;line-height:1.6}
+.lv li::before{content:"—";position:absolute;left:0;color:var(--muted);font-family:var(--f-num);font-size:12px}
+.lv .step{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);font-size:14px;line-height:1.65}
+.lv .step b{color:var(--ink)}
+.calltag{display:inline-block;font-family:var(--f-num);font-size:11px;letter-spacing:.1em;padding:3px 8px;border-radius:var(--r-ctl);background:var(--accent-soft);color:var(--accent);margin-top:9px}
+.lv.red .calltag{background:var(--alert-soft);color:var(--alert)}
+
+/* 排查清单表格 */
+.chk{width:100%;border-collapse:collapse;font-size:14px}
+.chk th{font-family:var(--f-num);font-size:11px;letter-spacing:.06em;color:var(--muted);text-align:left;padding:8px 8px 8px 0;border-bottom:2px solid var(--line);font-weight:600}
+.chk td{padding:10px 8px 10px 0;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
+.chk tr:last-child td{border-bottom:0}
+.chk td:first-child{font-weight:600;width:38%}
+
+/* 链接列表 */
+.linklist{list-style:none}
+.linklist li{border-top:1px solid var(--line)}
+.linklist li:first-child{border-top:0}
+.lnk{display:block;text-decoration:none;color:inherit;padding:11px 0;min-height:48px}
+.lnk .lt{font-size:15.5px;font-weight:600;line-height:1.5;color:var(--ink)}
+.lnk .lm{font-family:var(--f-num);font-size:11.5px;color:var(--muted);margin-top:3px;word-break:break-all;line-height:1.5}
+.lnk .lm .no{color:var(--accent);font-weight:600;margin-right:6px}
+.lnk .lm .go{color:var(--accent);margin-left:5px}
+.lnk:hover .lt,.lnk:focus-visible .lt{color:var(--accent)}
+.lnk:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-ctl)}
+.doubt{display:inline-block;font-size:11px;font-weight:700;color:var(--alert);background:var(--alert-soft);border-radius:var(--r-ctl);padding:1px 6px;margin-left:6px;vertical-align:2px}
+.empty{font-size:14px;color:var(--muted);padding:16px 0;text-align:center}
+.group{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:18px 0 8px}
+.group h3{font-size:16px;font-weight:700}
+.group .cnt{font-family:var(--f-num);font-size:11.5px;color:var(--muted)}
+
+.note{background:var(--accent-soft);border-radius:var(--r-card);padding:13px 15px;font-size:14px;line-height:1.65}
+.note b{font-weight:700}
+.warn{background:var(--alert-soft);border-left:2px solid var(--alert);border-radius:0 var(--r-card) var(--r-card) 0;padding:13px 15px;font-size:14px;line-height:1.65}
+.warn b{color:var(--alert);font-weight:700}
+.disclaim{border:1px solid var(--line);border-left:2px solid var(--alert);border-radius:var(--r-card);padding:13px 14px;font-size:13.5px;line-height:1.6;color:var(--muted);background:var(--surface)}
+.disclaim b{color:var(--ink)}
+.foot{font-family:var(--f-num);font-size:11px;letter-spacing:.1em;color:var(--muted);margin-top:22px;text-align:center}
+.backline{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.backline a{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;
+  border-radius:var(--r-pill);border:1px solid var(--accent);background:var(--accent);
+  color:#F4F1E9;text-decoration:none;font-size:15px;font-weight:600;
+}
+.backline a.ghost{background:transparent;color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(10px);bottom:26px;background:var(--world);color:#F3EFE4;font-size:14px;padding:10px 16px;border-radius:var(--r-pill);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media print{
+  html{background:#fff!important}
+  body{background:#fff!important;color:#000!important;padding:0}
+  .shell{max-width:none;background:#fff!important}
+  .hero{background:#fff!important;color:#000;border-radius:0;border-bottom:2px solid #000;padding:12px 0}
+  .hero h1,.hero-sub,.hero-foot,.hero-foot b,.mark{color:#000!important}
+  .iconbtn,.search,.toast,.backline{display:none!important}
+  .card,details.fold{box-shadow:none;border:1px solid #999;break-inside:avoid}
+  details.fold .body,details.fold .ask{display:block!important}
+  .lnk .lm{color:#333}
+  .sec-head{margin:16px 0 8px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="hero">
+    <div class="hero-bar">
+      <span class="mark">家庭照护工具包 · 知识索引</span>
+      <div class="hero-tools">
+        <button class="iconbtn" id="printBtn" aria-label="打印本页" title="打印本页">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208,72H176V40a8,8,0,0,0-8-8H88a8,8,0,0,0-8,8V72H48A16,16,0,0,0,32,88v80a16,16,0,0,0,16,16H64v40a8,8,0,0,0,8,8H184a8,8,0,0,0,8-8V184h16a16,16,0,0,0,16-16V88A16,16,0,0,0,208,72ZM96,48h64V72H96ZM176,216H80V176h96Zm32-48H48V88H208v80Zm-16-52a12,12,0,1,1-12-12A12,12,0,0,1,192,116Z"/></svg>
+        </button>
+        <button class="iconbtn" id="themeBtn" aria-label="切换夜间模式" title="切换夜间模式">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160,106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+        </button>
+      </div>
+    </div>
+    <h1>照护知识</h1>
+    <p class="hero-sub">护理常识、问题排查，以及医院两张宣教海报上 60 个二维码的标题索引。</p>
+    <div class="hero-foot"><b>只做索引，不做判断。</b>链接内容以医院原文为准；用药、剂量、处置一律听透析中心的。</div>
+  </header>
+
+  <main>
+
+    <div class="search">
+      <input id="q" type="search" placeholder="搜药名 / 主题 / 症状" aria-label="搜索知识内容" autocomplete="off">
+      <button class="clr" id="clr" aria-label="清空搜索">×</button>
+    </div>
+    <p class="search-echo" id="echo">共 9 张常识卡、3 级排查、5 条问题清单、60 条海报链接。试试搜「钾」或「苯磺酸」。</p>
+
+    <!-- ========== 01 常识卡 ========== -->
+    <section data-sec="cards">
+      <div class="sec-head"><span class="sec-num">01</span><span class="sec-title">护理常识</span><span class="sec-rule"></span></div>
+      <p class="sec-note">点开看一条。记的是"该记什么、该问谁"，不是病情结论。</p>
+      <div id="cards"><details class="fold" data-s="透析中血糖会变，只测上机那一次看不出后半程 透析过程中血糖可能发生变化，不同阶段不一样。把上机、透析中、透析末期、下机、透析后的数值各自记下来，医生才看得出是哪一段在变。 该在哪些时点测、要不要加测，请让透析中心写下来。">
+  <summary><span class="idx">01</span><span>透析中血糖会变，只测上机那一次看不出后半程</span></summary>
+  <p class="body">透析过程中血糖可能发生变化，不同阶段不一样。把上机、透析中、透析末期、下机、透析后的数值各自记下来，医生才看得出是哪一段在变。</p>
+  <p class="ask"><b>该问医生：</b>该在哪些时点测、要不要加测，请让透析中心写下来。</p>
+</details>
+<details class="fold" data-s="一个数值不如一个带时刻的数值 记血糖时顺手带上「已透析几分钟 / 还剩几分钟」、当时有没有不舒服、有没有刚吃过东西。三次这样记下来，比三十个孤零零的数字有用。 复诊时把这张按分钟排的时间轴打印出来带给医生。">
+  <summary><span class="idx">02</span><span>一个数值不如一个带时刻的数值</span></summary>
+  <p class="body">记血糖时顺手带上「已透析几分钟 / 还剩几分钟」、当时有没有不舒服、有没有刚吃过东西。三次这样记下来，比三十个孤零零的数字有用。</p>
+  <p class="ask"><b>该问医生：</b>复诊时把这张按分钟排的时间轴打印出来带给医生。</p>
+</details>
+<details class="fold" data-s="症状出现，先告诉现场的人 出汗、手抖、心慌、头晕、胸闷、气短、意识模糊、抽搐，出现就先告知透析室工作人员，不要先翻手机查资料。工具里也是这个顺序：第一个按钮是联系，第二个才是记录。 事后把发生时刻、当时数值、怎么处理、后来怎样补齐。">
+  <summary><span class="idx">03</span><span>症状出现，先告诉现场的人</span></summary>
+  <p class="body">出汗、手抖、心慌、头晕、胸闷、气短、意识模糊、抽搐，出现就先告知透析室工作人员，不要先翻手机查资料。工具里也是这个顺序：第一个按钮是联系，第二个才是记录。</p>
+  <p class="ask"><b>该问医生：</b>事后把发生时刻、当时数值、怎么处理、后来怎样补齐。</p>
+</details>
+<details class="fold" data-s="吃的东西也记一笔 加餐、进食和血糖记在同一条时间轴上，才看得出吃完之后数值有没有稳住。记「几点吃了什么」就够，不用算热量。 透析日要不要加餐、怎么加，按透析中心交代来。">
+  <summary><span class="idx">04</span><span>吃的东西也记一笔</span></summary>
+  <p class="body">加餐、进食和血糖记在同一条时间轴上，才看得出吃完之后数值有没有稳住。记「几点吃了什么」就够，不用算热量。</p>
+  <p class="ask"><b>该问医生：</b>透析日要不要加餐、怎么加，按透析中心交代来。</p>
+</details>
+<details class="fold" data-s="内瘘每天按教过的方法自查 按透析中心教的手法查震颤和杂音。摸不到、明显变弱、或和平时不一样，记录发现时间并立即联系透析中心；不要按压、不要自行处理。 自查手法不确定的，下次透析请护士再教一遍。">
+  <summary><span class="idx">05</span><span>内瘘每天按教过的方法自查</span></summary>
+  <p class="body">按透析中心教的手法查震颤和杂音。摸不到、明显变弱、或和平时不一样，记录发现时间并立即联系透析中心；不要按压、不要自行处理。</p>
+  <p class="ask"><b>该问医生：</b>自查手法不确定的，下次透析请护士再教一遍。</p>
+</details>
+<details class="fold" data-s="体重照抄透析单，工具只做减法 透前、透后体重照单子填，工具会显示与自填干体重的差值。这个差值只是记录，不是脱水量建议，也不能拿来自己调。 干体重有变动，以透析中心最新交代为准。">
+  <summary><span class="idx">06</span><span>体重照抄透析单，工具只做减法</span></summary>
+  <p class="body">透前、透后体重照单子填，工具会显示与自填干体重的差值。这个差值只是记录，不是脱水量建议，也不能拿来自己调。</p>
+  <p class="ask"><b>该问医生：</b>干体重有变动，以透析中心最新交代为准。</p>
+</details>
+<details class="fold" data-s="化验单只抄数，不解释 把项目名、数值、单位、参考范围、采样日期抄进来，趋势能看变化。指标是什么意思、要不要处理，由医生解释。 把看不懂的项目写进「待问医生」，别自行查结论。">
+  <summary><span class="idx">07</span><span>化验单只抄数，不解释</span></summary>
+  <p class="body">把项目名、数值、单位、参考范围、采样日期抄进来，趋势能看变化。指标是什么意思、要不要处理，由医生解释。</p>
+  <p class="ask"><b>该问医生：</b>把看不懂的项目写进「待问医生」，别自行查结论。</p>
+</details>
+<details class="fold" data-s="药单是照着抄的，不是工具开的 药名、剂量、时间都由家属照医生开的单子填，今天吃没吃打个勾就行。任何加减、停用、换时间，先问医生。 透析日要不要调整，写进待问医生清单。">
+  <summary><span class="idx">08</span><span>药单是照着抄的，不是工具开的</span></summary>
+  <p class="body">药名、剂量、时间都由家属照医生开的单子填，今天吃没吃打个勾就行。任何加减、停用、换时间，先问医生。</p>
+  <p class="ask"><b>该问医生：</b>透析日要不要调整，写进待问医生清单。</p>
+</details>
+<details class="fold" data-s="提醒不是报警 页面里的「该测血糖了」只在工具开着的时候出现；手机切到后台、锁屏、清缓存都可能让它停。建议同时用手机自带闹钟兜底，别把这个页面当监护设备。 急症一律联系透析中心或拨打 120，不要等提示。">
+  <summary><span class="idx">09</span><span>提醒不是报警</span></summary>
+  <p class="body">页面里的「该测血糖了」只在工具开着的时候出现；手机切到后台、锁屏、清缓存都可能让它停。建议同时用手机自带闹钟兜底，别把这个页面当监护设备。</p>
+  <p class="ask"><b>该问医生：</b>急症一律联系透析中心或拨打 120，不要等提示。</p>
+</details></div>
+    </section>
+
+    <!-- ========== 02 三级排查 ========== -->
+    <section data-sec="triage">
+      <div class="sec-head"><span class="sec-num">02</span><span class="sec-title">问题排查</span><span class="sec-rule"></span></div>
+      <p class="sec-note">先对号入座，再决定要不要打电话。急症不要在家观察。</p>
+      <div id="triage"><div class="card lv red" data-s="红 · 立即联系透析中心或拨打 120 意识改变、抽搐、叫不醒 胸痛、明显呼吸困难 内瘘震颤或杂音消失 出血不止、黑便、大片瘀斑 透析中或透析后出现抽搐、意识模糊、胸闷气短 血糖低于医生事先给的线且伴有不适 先联系现场医护或拨号 → 把刚才记下的时刻、数值、症状一起说清楚 → 处置与转归事后补记。页面不解释原因、不给药。 立即拨打">
+  <div class="card-head"><h3>红 · 立即联系透析中心或拨打 120</h3></div>
+  <ul><li>意识改变、抽搐、叫不醒</li><li>胸痛、明显呼吸困难</li><li>内瘘震颤或杂音消失</li><li>出血不止、黑便、大片瘀斑</li><li>透析中或透析后出现抽搐、意识模糊、胸闷气短</li><li>血糖低于医生事先给的线且伴有不适</li></ul>
+  <p class="step"><b>怎么做：</b>先联系现场医护或拨号 → 把刚才记下的时刻、数值、症状一起说清楚 → 处置与转归事后补记。页面不解释原因、不给药。</p>
+  <span class="calltag">立即拨打</span>
+</div>
+<div class="card lv amber" data-s="黄 · 复测、记录，并联系透析中心咨询 透析中或透析后头晕、出汗、手抖、心慌 血糖较前明显下降但没有严重症状 血压明显偏离医生给的范围 体重短期内明显上升、进食明显减少 透析中或透析后低热 按医生事先给的时点复测 → 记下时间点与数值 → 按医生事先交代的流程处理 → 打电话说明发生了什么、什么时刻、数值多少。 联系透析中心">
+  <div class="card-head"><h3>黄 · 复测、记录，并联系透析中心咨询</h3></div>
+  <ul><li>透析中或透析后头晕、出汗、手抖、心慌</li><li>血糖较前明显下降但没有严重症状</li><li>血压明显偏离医生给的范围</li><li>体重短期内明显上升、进食明显减少</li><li>透析中或透析后低热</li></ul>
+  <p class="step"><b>怎么做：</b>按医生事先给的时点复测 → 记下时间点与数值 → 按医生事先交代的流程处理 → 打电话说明发生了什么、什么时刻、数值多少。</p>
+  <span class="calltag">联系透析中心</span>
+</div>
+<div class="card lv green" data-s="绿 · 记下来，下次透析带给医生看 轻微乏力、口味变化、睡眠变化 单次数值略偏但没有不适 建议记入今日备注，不弹警告、不做判断。 记录即可">
+  <div class="card-head"><h3>绿 · 记下来，下次透析带给医生看</h3></div>
+  <ul><li>轻微乏力、口味变化、睡眠变化</li><li>单次数值略偏但没有不适</li></ul>
+  <p class="step"><b>怎么做：</b>建议记入今日备注，不弹警告、不做判断。</p>
+  <span class="calltag">记录即可</span>
+</div></div>
+    </section>
+
+    <!-- ========== 03 排查清单 ========== -->
+    <section data-sec="checklist">
+      <div class="sec-head"><span class="sec-num">03</span><span class="sec-title">常见情况速查</span><span class="sec-rule"></span></div>
+      <div class="card" id="checklist"><table class="chk"><thead><tr><th>看到什么</th><th>先记什么 / 做什么</th><th>联系谁</th></tr></thead><tbody>
+<tr data-s="透析后期头晕、出汗、手抖、胸闷 立即测血糖，一键标记症状（自动带上已透析分钟 / 剩余分钟）；按医生事先给的处置流程处理；复测后记数值与转归 症状出现即告知透析室工作人员；反复出现则复诊时带上时序记录"><td>透析后期头晕、出汗、手抖、胸闷</td><td>立即测血糖，一键标记症状（自动带上已透析分钟 / 剩余分钟）；按医生事先给的处置流程处理；复测后记数值与转归</td><td>症状出现即告知透析室工作人员；反复出现则复诊时带上时序记录</td></tr>
+<tr data-s="内瘘震颤变弱或摸不到 不要按压、不要自行处理，记录发现时间 立即联系透析中心"><td>内瘘震颤变弱或摸不到</td><td>不要按压、不要自行处理，记录发现时间</td><td>立即联系透析中心</td></tr>
+<tr data-s="皮肤瘀斑、牙龈出血、黑便 记录部位与时间，带上最近一次血常规结果 立即联系医生"><td>皮肤瘀斑、牙龈出血、黑便</td><td>记录部位与时间，带上最近一次血常规结果</td><td>立即联系医生</td></tr>
+<tr data-s="体重短期内明显上升 回看饮水与饮食记录，核对透前体重 下次透析前告知透析室，不自行调整饮水或用药"><td>体重短期内明显上升</td><td>回看饮水与饮食记录，核对透前体重</td><td>下次透析前告知透析室，不自行调整饮水或用药</td></tr>
+<tr data-s="透析后发热 记体温与时间点，看是否伴寒战 体温持续或伴寒战，联系透析中心"><td>透析后发热</td><td>记体温与时间点，看是否伴寒战</td><td>体温持续或伴寒战，联系透析中心</td></tr>
+</tbody></table></div>
+    </section>
+
+    <!-- ========== 04 健康宣教 ========== -->
+    <section data-sec="tree">
+      <div class="sec-head"><span class="sec-num">04</span><span class="sec-title">健康宣教</span><span class="sec-rule"></span></div>
+      <p class="sec-note">医院宣教海报上 22 个二维码，标题按码下方文字逐条辨认。点标题打开链接。</p>
+      <div class="card">
+        <div class="group"><h3>健康宣教二维码树</h3><span class="cnt" id="cntTree">22 条</span></div>
+        <ul class="linklist" id="listTree"><li data-s="脂肪肝健康科普 01 https://weixin.qq.com/sph/AY8y2Lnls weixin.qq.com">
+  <a class="lnk" href="https://weixin.qq.com/sph/AY8y2Lnls" target="_blank" rel="noopener noreferrer">
+    <div class="lt">脂肪肝健康科普<span class="doubt">存疑</span></div>
+    <div class="lm"><span class="no">01</span>weixin.qq.com<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="心肺复苏 02 https://weixin.qq.com/sph/AWzEoZSJ1 weixin.qq.com">
+  <a class="lnk" href="https://weixin.qq.com/sph/AWzEoZSJ1" target="_blank" rel="noopener noreferrer">
+    <div class="lt">心肺复苏</div>
+    <div class="lm"><span class="no">02</span>weixin.qq.com<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="气道异物梗阻急救 03 https://weixin.qq.com/sph/AbCcgoj9R weixin.qq.com">
+  <a class="lnk" href="https://weixin.qq.com/sph/AbCcgoj9R" target="_blank" rel="noopener noreferrer">
+    <div class="lt">气道异物梗阻急救</div>
+    <div class="lm"><span class="no">03</span>weixin.qq.com<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="预防跌倒健康科普 04 https://weixin.qq.com/sph/AjZjU7tFB weixin.qq.com">
+  <a class="lnk" href="https://weixin.qq.com/sph/AjZjU7tFB" target="_blank" rel="noopener noreferrer">
+    <div class="lt">预防跌倒健康科普</div>
+    <div class="lm"><span class="no">04</span>weixin.qq.com<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="AED知识科普 05 https://weixin.qq.com/sph/AovbKnNf5 weixin.qq.com">
+  <a class="lnk" href="https://weixin.qq.com/sph/AovbKnNf5" target="_blank" rel="noopener noreferrer">
+    <div class="lt">AED知识科普</div>
+    <div class="lm"><span class="no">05</span>weixin.qq.com<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="慢性病患者自备药品的管理 06 https://6l1ro6.58u.cn/a/OzdeQj4/ 6l1ro6.58u.cn">
+  <a class="lnk" href="https://6l1ro6.58u.cn/a/OzdeQj4/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">慢性病患者自备药品的管理<span class="doubt">存疑</span></div>
+    <div class="lm"><span class="no">06</span>6l1ro6.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="踝泵运动健康科普 07 https://weixin.qq.com/sph/AFTh3Junj weixin.qq.com">
+  <a class="lnk" href="https://weixin.qq.com/sph/AFTh3Junj" target="_blank" rel="noopener noreferrer">
+    <div class="lt">踝泵运动健康科普</div>
+    <div class="lm"><span class="no">07</span>weixin.qq.com<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="肾脏知识健康科普 08 https://weixin.qq.com/sph/A9NwqcmvR weixin.qq.com">
+  <a class="lnk" href="https://weixin.qq.com/sph/A9NwqcmvR" target="_blank" rel="noopener noreferrer">
+    <div class="lt">肾脏知识健康科普</div>
+    <div class="lm"><span class="no">08</span>weixin.qq.com<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="血液透析患者饮食 09 https://rj3ej4.58u.cn/a/OzdeqP4/ rj3ej4.58u.cn">
+  <a class="lnk" href="https://rj3ej4.58u.cn/a/OzdeqP4/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">血液透析患者饮食</div>
+    <div class="lm"><span class="no">09</span>rj3ej4.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="血液净化方式的选择 10 https://rj3ej4.58u.cn/a/AG2QNEZ/ rj3ej4.58u.cn">
+  <a class="lnk" href="https://rj3ej4.58u.cn/a/AG2QNEZ/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">血液净化方式的选择</div>
+    <div class="lm"><span class="no">10</span>rj3ej4.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="血脂报告单健康科普 11 https://weixin.qq.com/sph/A2pjyAIFu weixin.qq.com">
+  <a class="lnk" href="https://weixin.qq.com/sph/A2pjyAIFu" target="_blank" rel="noopener noreferrer">
+    <div class="lt">血脂报告单健康科普</div>
+    <div class="lm"><span class="no">11</span>weixin.qq.com<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="「钾」的无声威胁 12 https://6l1ro6.58u.cn/a/bJmVjBv/ 6l1ro6.58u.cn">
+  <a class="lnk" href="https://6l1ro6.58u.cn/a/bJmVjBv/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">「钾」的无声威胁</div>
+    <div class="lm"><span class="no">12</span>6l1ro6.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="血液透析知多少？ 13 https://6l1ro6.58u.cn/a/bKorj7n/ 6l1ro6.58u.cn">
+  <a class="lnk" href="https://6l1ro6.58u.cn/a/bKorj7n/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">血液透析知多少？</div>
+    <div class="lm"><span class="no">13</span>6l1ro6.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="导管的自我护理 14 https://6l1ro6.58u.cn/a/b1PWe1l/ 6l1ro6.58u.cn">
+  <a class="lnk" href="https://6l1ro6.58u.cn/a/b1PWe1l/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">导管的自我护理</div>
+    <div class="lm"><span class="no">14</span>6l1ro6.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="血液透析患者相关的抗凝药物及注意事项 15 https://rj3ej4.58u.cn/a/OkJQ9Jj/ rj3ej4.58u.cn">
+  <a class="lnk" href="https://rj3ej4.58u.cn/a/OkJQ9Jj/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">血液透析患者相关的抗凝药物及注意事项</div>
+    <div class="lm"><span class="no">15</span>rj3ej4.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="透析中运动疗法 16 https://6l1ro6.58u.cn/a/b3eD0n1/ 6l1ro6.58u.cn">
+  <a class="lnk" href="https://6l1ro6.58u.cn/a/b3eD0n1/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">透析中运动疗法</div>
+    <div class="lm"><span class="no">16</span>6l1ro6.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="内瘘术后锻炼 17 https://rj3ej4.58u.cn/a/R48mg65/ rj3ej4.58u.cn">
+  <a class="lnk" href="https://rj3ej4.58u.cn/a/R48mg65/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">内瘘术后锻炼</div>
+    <div class="lm"><span class="no">17</span>rj3ej4.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="内瘘拔针后注意事项 18 https://rj3ej4.58u.cn/a/bDz0QMg/ rj3ej4.58u.cn">
+  <a class="lnk" href="https://rj3ej4.58u.cn/a/bDz0QMg/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">内瘘拔针后注意事项</div>
+    <div class="lm"><span class="no">18</span>rj3ej4.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="如何预防高磷血症？ 19 https://6l1ro6.58u.cn/a/b681jq2/ 6l1ro6.58u.cn">
+  <a class="lnk" href="https://6l1ro6.58u.cn/a/b681jq2/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">如何预防高磷血症？</div>
+    <div class="lm"><span class="no">19</span>6l1ro6.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="透析当日，透析患者做哪些准备？ 20 https://rj3ej4.58u.cn/a/R48mgwX/ rj3ej4.58u.cn">
+  <a class="lnk" href="https://rj3ej4.58u.cn/a/R48mgwX/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">透析当日，透析患者做哪些准备？</div>
+    <div class="lm"><span class="no">20</span>rj3ej4.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="正确认识干体重 21 https://rj3ej4.58u.cn/a/bZj1n6x/ rj3ej4.58u.cn">
+  <a class="lnk" href="https://rj3ej4.58u.cn/a/bZj1n6x/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">正确认识干体重</div>
+    <div class="lm"><span class="no">21</span>rj3ej4.58u.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="动静脉内瘘的管理路径 22 https://rj3ej4.58u.cn/a/O8NM0Bz/ rj3ej4.58u.cn">
+  <a class="lnk" href="https://rj3ej4.58u.cn/a/O8NM0Bz/" target="_blank" rel="noopener noreferrer">
+    <div class="lt">动静脉内瘘的管理路径</div>
+    <div class="lm"><span class="no">22</span>rj3ej4.58u.cn<span class="go">↗</span></div>
+  </a>
+</li></ul>
+        <p class="empty" id="emptyTree" hidden>没有匹配的条目。</p>
+      </div>
+    </section>
+
+    <!-- ========== 05 常用口服药 ========== -->
+    <section data-sec="drug">
+      <div class="sec-head"><span class="sec-num">05</span><span class="sec-title">常用口服药</span><span class="sec-rule"></span></div>
+      <p class="sec-note">药表 38 条，编号与海报自带 1–38 一致。<b>本页只给药名索引，不提供剂量和用法。</b></p>
+      <div class="card">
+        <div class="group"><h3>重症肾脏病 · 血液净化科常用口服药物一览表</h3><span class="cnt" id="cntDrug">38 条</span></div>
+        <ul class="linklist" id="listDrug"><li data-s="苯磺酸氨氯地平片（络活喜） 01 http://qr61.cn/otkFrD/q25waTM qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/q25waTM" target="_blank" rel="noopener noreferrer">
+    <div class="lt">苯磺酸氨氯地平片（络活喜）</div>
+    <div class="lm"><span class="no">01</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="苯磺酸左旋氨氯地平片（施慧达） 02 http://qr61.cn/otkFrD/qbnhDvM qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qbnhDvM" target="_blank" rel="noopener noreferrer">
+    <div class="lt">苯磺酸左旋氨氯地平片（施慧达）</div>
+    <div class="lm"><span class="no">02</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="硝苯地平缓释片（I） 03 http://qr71.cn/otkFrD/qJexZeO qr71.cn">
+  <a class="lnk" href="http://qr71.cn/otkFrD/qJexZeO" target="_blank" rel="noopener noreferrer">
+    <div class="lt">硝苯地平缓释片（I）</div>
+    <div class="lm"><span class="no">03</span>qr71.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="硝苯地平控释片 04 http://qr71.cn/otkFrD/qlfstlk qr71.cn">
+  <a class="lnk" href="http://qr71.cn/otkFrD/qlfstlk" target="_blank" rel="noopener noreferrer">
+    <div class="lt">硝苯地平控释片</div>
+    <div class="lm"><span class="no">04</span>qr71.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="琥珀酸美托洛尔缓释片 05 http://qr61.cn/otkFrD/qeV7hp2 qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qeV7hp2" target="_blank" rel="noopener noreferrer">
+    <div class="lt">琥珀酸美托洛尔缓释片</div>
+    <div class="lm"><span class="no">05</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="卡维地洛片（金络） 06 http://qr61.cn/otkFrD/qp9W0No qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qp9W0No" target="_blank" rel="noopener noreferrer">
+    <div class="lt">卡维地洛片（金络）</div>
+    <div class="lm"><span class="no">06</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="沙库巴曲缬沙坦钠片（诺欣妥） 07 http://qr61.cn/otkFrD/q9vIvsA qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/q9vIvsA" target="_blank" rel="noopener noreferrer">
+    <div class="lt">沙库巴曲缬沙坦钠片（诺欣妥）</div>
+    <div class="lm"><span class="no">07</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="氢氯噻嗪片 08 http://qr61.cn/otkFrD/q1dmc2d qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/q1dmc2d" target="_blank" rel="noopener noreferrer">
+    <div class="lt">氢氯噻嗪片</div>
+    <div class="lm"><span class="no">08</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="阿司匹林肠溶片（拜阿司匹林） 09 http://qr61.cn/otkFrD/qnsri6k qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qnsri6k" target="_blank" rel="noopener noreferrer">
+    <div class="lt">阿司匹林肠溶片（拜阿司匹林）</div>
+    <div class="lm"><span class="no">09</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="硫酸氢氯吡格雷片（波立维） 10 http://qr61.cn/otkFrD/qcU9dpH qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qcU9dpH" target="_blank" rel="noopener noreferrer">
+    <div class="lt">硫酸氢氯吡格雷片（波立维）</div>
+    <div class="lm"><span class="no">10</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="单硝酸异山梨酯缓释胶囊 11 http://qr71.cn/otkFrD/qt5xD4z qr71.cn">
+  <a class="lnk" href="http://qr71.cn/otkFrD/qt5xD4z" target="_blank" rel="noopener noreferrer">
+    <div class="lt">单硝酸异山梨酯缓释胶囊</div>
+    <div class="lm"><span class="no">11</span>qr71.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="阿托伐他汀钙片（美达信） 12 http://qr61.cn/otkFrD/qeffz9D qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qeffz9D" target="_blank" rel="noopener noreferrer">
+    <div class="lt">阿托伐他汀钙片（美达信）</div>
+    <div class="lm"><span class="no">12</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="非诺贝特胶囊（力平之） 13 http://qr61.cn/otkFrD/qdZS54I qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qdZS54I" target="_blank" rel="noopener noreferrer">
+    <div class="lt">非诺贝特胶囊（力平之）</div>
+    <div class="lm"><span class="no">13</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="艾司奥美拉唑镁肠溶片 14 http://qr71.cn/otkFrD/qEk08bQ qr71.cn">
+  <a class="lnk" href="http://qr71.cn/otkFrD/qEk08bQ" target="_blank" rel="noopener noreferrer">
+    <div class="lt">艾司奥美拉唑镁肠溶片<span class="doubt">存疑</span></div>
+    <div class="lm"><span class="no">14</span>qr71.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="枸橼酸莫沙必利片 15 http://qr61.cn/otkFrD/qGaWIND qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qGaWIND" target="_blank" rel="noopener noreferrer">
+    <div class="lt">枸橼酸莫沙必利片</div>
+    <div class="lm"><span class="no">15</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="枯草杆菌二联活菌肠溶胶囊（美常安） 16 http://qr61.cn/otkFrD/qgQTwgJ qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qgQTwgJ" target="_blank" rel="noopener noreferrer">
+    <div class="lt">枯草杆菌二联活菌肠溶胶囊（美常安）</div>
+    <div class="lm"><span class="no">16</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="双歧杆菌乳杆菌三联活菌片（金双歧） 17 http://qr61.cn/otkFrD/qPUM2EW qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qPUM2EW" target="_blank" rel="noopener noreferrer">
+    <div class="lt">双歧杆菌乳杆菌三联活菌片（金双歧）</div>
+    <div class="lm"><span class="no">17</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="复方消化酶胶囊 18 http://qr61.cn/otkFrD/q8dYic1 qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/q8dYic1" target="_blank" rel="noopener noreferrer">
+    <div class="lt">复方消化酶胶囊</div>
+    <div class="lm"><span class="no">18</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="铝镁加混悬液（安达） 19 http://qr61.cn/otkFrD/qYdd8nc qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qYdd8nc" target="_blank" rel="noopener noreferrer">
+    <div class="lt">铝镁加混悬液（安达）</div>
+    <div class="lm"><span class="no">19</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="百令胶囊 20 http://qr61.cn/otkFrD/qyUSR5U qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qyUSR5U" target="_blank" rel="noopener noreferrer">
+    <div class="lt">百令胶囊</div>
+    <div class="lm"><span class="no">20</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="肾衰宁颗粒 21 http://qr61.cn/otkFrD/qeFrm1M qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qeFrm1M" target="_blank" rel="noopener noreferrer">
+    <div class="lt">肾衰宁颗粒</div>
+    <div class="lm"><span class="no">21</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="尿毒清颗粒 22 http://qr61.cn/otkFrD/qRIP0VK qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qRIP0VK" target="_blank" rel="noopener noreferrer">
+    <div class="lt">尿毒清颗粒</div>
+    <div class="lm"><span class="no">22</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="吗替麦考酚酯分散片（赛可平） 23 http://qr61.cn/otkFrD/qjHgiHM qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qjHgiHM" target="_blank" rel="noopener noreferrer">
+    <div class="lt">吗替麦考酚酯分散片（赛可平）</div>
+    <div class="lm"><span class="no">23</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="复方α-酮酸片（开同） 24 http://qr61.cn/otkFrD/qkPtipb qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qkPtipb" target="_blank" rel="noopener noreferrer">
+    <div class="lt">复方α-酮酸片（开同）</div>
+    <div class="lm"><span class="no">24</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="复方α-酮酸片（森同） 25 http://qr71.cn/otkFrD/qEC06IU qr71.cn">
+  <a class="lnk" href="http://qr71.cn/otkFrD/qEC06IU" target="_blank" rel="noopener noreferrer">
+    <div class="lt">复方α-酮酸片（森同）</div>
+    <div class="lm"><span class="no">25</span>qr71.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="碳酸镧咀嚼片（福斯利诺） 26 http://qr71.cn/otkFrD/ql8Svxn qr71.cn">
+  <a class="lnk" href="http://qr71.cn/otkFrD/ql8Svxn" target="_blank" rel="noopener noreferrer">
+    <div class="lt">碳酸镧咀嚼片（福斯利诺）</div>
+    <div class="lm"><span class="no">26</span>qr71.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="碳酸司维拉姆片（诺维乐） 27 http://qr61.cn/otkFrD/qiG7zcd qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qiG7zcd" target="_blank" rel="noopener noreferrer">
+    <div class="lt">碳酸司维拉姆片（诺维乐）</div>
+    <div class="lm"><span class="no">27</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="多糖铁复合物胶囊（力蜚能） 28 http://qr61.cn/otkFrD/qv9hf79 qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qv9hf79" target="_blank" rel="noopener noreferrer">
+    <div class="lt">多糖铁复合物胶囊（力蜚能）</div>
+    <div class="lm"><span class="no">28</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="甲钴胺片 29 http://qr61.cn/otkFrD/qGmsBM9 qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qGmsBM9" target="_blank" rel="noopener noreferrer">
+    <div class="lt">甲钴胺片</div>
+    <div class="lm"><span class="no">29</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="辅酶Q10片（能气朗） 30 http://qr61.cn/otkFrD/q4Hs0V5 qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/q4Hs0V5" target="_blank" rel="noopener noreferrer">
+    <div class="lt">辅酶Q10片（能气朗）</div>
+    <div class="lm"><span class="no">30</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="叶酸片 31 http://qr61.cn/otkFrD/qRfEyUm qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qRfEyUm" target="_blank" rel="noopener noreferrer">
+    <div class="lt">叶酸片</div>
+    <div class="lm"><span class="no">31</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="苏黄止咳胶囊 32 http://qr61.cn/otkFrD/q1bwJci qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/q1bwJci" target="_blank" rel="noopener noreferrer">
+    <div class="lt">苏黄止咳胶囊</div>
+    <div class="lm"><span class="no">32</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="乙酰半胱氨酸颗粒（富露施） 33 http://qr61.cn/otkFrD/qdAcF5P qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qdAcF5P" target="_blank" rel="noopener noreferrer">
+    <div class="lt">乙酰半胱氨酸颗粒（富露施）</div>
+    <div class="lm"><span class="no">33</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="盐酸莫西沙星片（拜复乐） 34 http://qr61.cn/otkFrD/qF9JyUY qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qF9JyUY" target="_blank" rel="noopener noreferrer">
+    <div class="lt">盐酸莫西沙星片（拜复乐）</div>
+    <div class="lm"><span class="no">34</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="叶酸整蛋白型肠内营养剂（能全素） 35 http://qr71.cn/otkFrD/qvu0l46 qr71.cn">
+  <a class="lnk" href="http://qr71.cn/otkFrD/qvu0l46" target="_blank" rel="noopener noreferrer">
+    <div class="lt">叶酸整蛋白型肠内营养剂（能全素）<span class="doubt">存疑</span></div>
+    <div class="lm"><span class="no">35</span>qr71.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="碳酸钙D3片（钙尔奇D） 36 http://qr61.cn/otkFrD/qYWNE8d qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qYWNE8d" target="_blank" rel="noopener noreferrer">
+    <div class="lt">碳酸钙D3片（钙尔奇D）</div>
+    <div class="lm"><span class="no">36</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="滋阴润肠口服液 37 http://qr61.cn/otkFrD/qAn4zsU qr61.cn">
+  <a class="lnk" href="http://qr61.cn/otkFrD/qAn4zsU" target="_blank" rel="noopener noreferrer">
+    <div class="lt">滋阴润肠口服液</div>
+    <div class="lm"><span class="no">37</span>qr61.cn<span class="go">↗</span></div>
+  </a>
+</li>
+<li data-s="右佐匹克隆片 38 http://qr71.cn/otkFrD/qH0yq4a qr71.cn">
+  <a class="lnk" href="http://qr71.cn/otkFrD/qH0yq4a" target="_blank" rel="noopener noreferrer">
+    <div class="lt">右佐匹克隆片</div>
+    <div class="lm"><span class="no">38</span>qr71.cn<span class="go">↗</span></div>
+  </a>
+</li></ul>
+        <p class="empty" id="emptyDrug" hidden>没有匹配的条目。</p>
+      </div>
+      <div class="note"><b>查不到要看的药品？</b>海报底部写着：可致电药学部 <b>85323591</b> 帮助查阅。</div>
+      <div class="warn" style="margin-top:10px"><b>链接打不开是正常的：</b>部分链接为微信内内容或活码中转页，浏览器可能打不开正文。可在微信里打开、复制链接后用另一台设备打开，或直接扫医院墙上的海报原图。</div>
+    </section>
+
+    <!-- ========== 06 来源与存疑 ========== -->
+    <section data-sec="source">
+      <div class="sec-head"><span class="sec-num">06</span><span class="sec-title">来源与存疑</span><span class="sec-rule"></span></div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">这些标题是怎么来的</span><span class="meta">source</span></div>
+        <p class="sec-note" style="margin:0 0 10px">两张医院公开宣教海报上、每个二维码正下方的标题文字，逐块裁切放大后人工辨认。编号与 tools/build.py 的 ordered_links 一致：按海报坐标聚行、行内从左到右。药表海报自带 1-38 编号，与此处编号完全对应。</p>
+        <div id="uncertain"><details class="fold" data-s="drug-14 第二行被海报反光遮挡，可见「…镁肠溶片」，按通用药名补全为「艾司奥美拉唑镁肠溶片」，请对照原图确认">
+  <summary><span class="idx">drug-14</span><span>第 drug-14 条标题待对照原图</span></summary>
+  <p class="body">第二行被海报反光遮挡，可见「…镁肠溶片」，按通用药名补全为「艾司奥美拉唑镁肠溶片」，请对照原图确认</p>
+</details>
+<details class="fold" data-s="drug-35 图上第一行作「叶酸整蛋白型」，与通用药名写法不一致，按图照抄，未擅自改写">
+  <summary><span class="idx">drug-35</span><span>第 drug-35 条标题待对照原图</span></summary>
+  <p class="body">图上第一行作「叶酸整蛋白型」，与通用药名写法不一致，按图照抄，未擅自改写</p>
+</details>
+<details class="fold" data-s="tree-1 小字略糊，辨为「脂肪肝健康科普」，请对照原图确认">
+  <summary><span class="idx">tree-1</span><span>第 tree-1 条标题待对照原图</span></summary>
+  <p class="body">小字略糊，辨为「脂肪肝健康科普」，请对照原图确认</p>
+</details>
+<details class="fold" data-s="tree-6 「自备药＿的管理」中间一字被反光白点遮住，按「品」补全，请对照原图确认">
+  <summary><span class="idx">tree-6</span><span>第 tree-6 条标题待对照原图</span></summary>
+  <p class="body">「自备药＿的管理」中间一字被反光白点遮住，按「品」补全，请对照原图确认</p>
+</details></div>
+      </div>
+      <div class="disclaim" style="margin-top:12px"><b>免责：</b>本工具用于日常护理记录与就诊沟通，不构成医疗建议、不用于诊断或治疗决策。出现急症请立即联系透析中心或拨打 120。所有个人健康数据仅保存在本机，不上传。</div>
+    </section>
+
+    <div class="backline">
+      <a href="index.html">← 返回工具包</a>
+      <a class="ghost" href="透析陪护综合卡.html">打开综合卡</a>
+    </div>
+    <p class="foot">v2.0 · dialysis.v1 · 离线可用</p>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "dialysis.v1";
+  var $ = function(id){ return document.getElementById(id); };
+
+  function toast(msg){
+    var t = $("toast"); t.textContent = msg; t.classList.add("on");
+    clearTimeout(toast.t); toast.t = setTimeout(function(){ t.classList.remove("on"); }, 1900);
+  }
+
+  /* 夜间模式与工具包其它页面共用 dialysis.v1 */
+  function applyTheme(){
+    var dark = false;
+    try{ var s = JSON.parse(localStorage.getItem(KEY) || "{}"); dark = s.theme === "dark"; }catch(e){}
+    document.body.classList.toggle("dark", dark);
+    $("themeBtn").setAttribute("aria-label", dark ? "切换日间模式" : "切换夜间模式");
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#091614" : "#16302B");
+  }
+  $("themeBtn").addEventListener("click", function(){
+    var dark = !document.body.classList.contains("dark");
+    var s = {};
+    try{ s = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; }catch(e){ s = {}; }
+    s.theme = dark ? "dark" : "light";
+    try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){ toast("这台浏览器不允许保存设置"); }
+    applyTheme();
+  });
+  $("printBtn").addEventListener("click", function(){ window.print(); });
+
+  /* 搜索：过滤常识卡、排查卡、清单行与链接条目 */
+  var q = $("q"), clr = $("clr"), echo = $("echo");
+  var items = Array.prototype.slice.call(document.querySelectorAll("[data-s]"));
+  var sections = Array.prototype.slice.call(document.querySelectorAll("[data-sec]"));
+  function norm(s){ return String(s || "").toLowerCase().replace(/\s+/g, ""); }
+  function filter(){
+    var key = norm(q.value);
+    clr.classList.toggle("on", !!key);
+    var hit = 0;
+    items.forEach(function(el){
+      var ok = !key || norm(el.dataset.s).indexOf(key) >= 0 || norm(el.textContent).indexOf(key) >= 0;
+      el.hidden = !ok;
+      if(ok) hit++;
+      /* 命中时自动展开折叠卡，避免"搜到了却看不见" */
+      if(ok && key && el.tagName === "DETAILS") el.open = true;
+    });
+    sections.forEach(function(sec){
+      var visible = Array.prototype.slice.call(sec.querySelectorAll("[data-s]")).some(function(el){ return !el.hidden; });
+      sec.hidden = !key ? false : !visible;
+    });
+    ["tree","drug"].forEach(function(g){
+      var list = $("list" + g.charAt(0).toUpperCase() + g.slice(1));
+      var n = Array.prototype.slice.call(list.children).filter(function(li){ return !li.hidden; }).length;
+      $("cnt" + g.charAt(0).toUpperCase() + g.slice(1)).textContent = n + " 条";
+      $("empty" + g.charAt(0).toUpperCase() + g.slice(1)).hidden = n > 0;
+    });
+    echo.textContent = key ? ("找到 " + hit + " 条。清空搜索看全部。") : "共 9 张常识卡、3 级排查、5 条问题清单、60 条海报链接。试试搜「钾」或「苯磺酸」。";
+  }
+  q.addEventListener("input", filter);
+  clr.addEventListener("click", function(){ q.value = ""; filter(); q.focus(); });
+
+  applyTheme();
+  filter();
+})();
+</script>
+</body>
+</html>

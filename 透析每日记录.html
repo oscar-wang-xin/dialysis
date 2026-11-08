@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>透析每日记录 · 体重 血压 血糖</title>
+<meta name="theme-color" content="#F4F1E9">
+<style>
+:root{
+  --canvas:#F3F0E6;
+  --paper:#FCFAF1;
+  --rule:#DCD5C2;
+  --rule-strong:#C4BB9F;
+  --ink:#1B211D;
+  --muted:#72786C;
+  --accent:#1F6E63;
+  --accent-soft:#E0EDE7;
+  --alert:#9E3A2C;
+  --alert-soft:#F3E3DB;
+  --shell:18px;--card:8px;--ctl:6px;--pill:999px;
+  --shadow:0 1px 2px rgba(27,33,29,.05),0 10px 22px -12px rgba(27,33,29,.18);
+  --f-num:ui-monospace,"SF Mono","Consolas","Roboto Mono",monospace;
+  --f-body:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+  --f-title:"Songti SC","Source Han Serif SC","Noto Serif SC","SimSun",serif;
+  color-scheme:light;
+}
+body.dark{
+  color-scheme:dark;
+  --canvas:#0D1315;--paper:#151E20;--rule:#26312F;--rule-strong:#39433F;
+  --ink:#E7E4D9;--muted:#98A29C;--accent:#5AA99A;--accent-soft:#17302C;
+  --alert:#D97261;--alert-soft:#2A1A17;
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 24px -12px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--canvas);color:var(--ink);
+  font-family:var(--f-body);font-size:16.5px;line-height:1.6;
+  padding-bottom:110px;
+}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px}
+
+/* 抬头像病历首页 */
+.head{
+  padding:calc(20px + env(safe-area-inset-top)) 0 16px;
+  border-bottom:2px solid var(--rule-strong);
+  display:flex;align-items:flex-end;justify-content:space-between;gap:14px;
+}
+.head h1{font-family:var(--f-title);font-size:31px;line-height:1.1;letter-spacing:.02em}
+.head p{font-size:12.5px;color:var(--muted);letter-spacing:.06em;margin-top:6px;font-family:var(--f-num)}
+.tools{display:flex;gap:6px}
+.iconbtn{
+  width:38px;height:38px;display:grid;place-items:center;
+  border:1px solid var(--rule);border-radius:var(--ctl);background:var(--paper);color:var(--ink);cursor:pointer;
+}
+.iconbtn svg{width:18px;height:18px}
+
+/* 台账卡 */
+.sheet{
+  background:var(--paper);border:1px solid var(--rule);border-radius:var(--card);
+  box-shadow:var(--shadow);margin-top:16px;padding:16px 16px 14px;
+  position:relative;overflow:hidden;
+}
+.sheet::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:.55;
+}
+.sheet h2{font-size:15px;font-family:var(--f-num);letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:12px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f label{display:block;font-size:12px;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;font-family:var(--f-num)}
+.f input{
+  width:100%;font-family:var(--f-num);font-size:17px;color:var(--ink);
+  background:transparent;border:0;border-bottom:1.5px solid var(--rule-strong);
+  padding:5px 2px;border-radius:0;
+}
+.f input:focus{outline:0;border-bottom-color:var(--accent);background:var(--accent-soft)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.45}
+.f.wide{grid-column:1/-1}
+.glu-row{display:flex;gap:8px;align-items:center;margin-top:5px}
+.glu-row input{flex:1;min-width:0}
+.glu-row select{flex:0 0 8.4em;width:8.4em;font-family:var(--f-body);font-size:15px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:var(--ctl);padding:9px 6px}
+.glu-low-num{color:var(--alert)!important;border-bottom-color:var(--alert)!important}
+.glu-warn{margin-top:8px;background:var(--alert-soft);border-left:2px solid var(--alert);border-radius:0 var(--ctl) var(--ctl) 0;padding:9px 11px;font-size:13.5px;line-height:1.6;color:var(--ink)}
+.glu-warn b{color:var(--alert)}
+.val-low{color:var(--alert);font-weight:600}
+.f textarea{
+  width:100%;min-height:64px;font-family:var(--f-body);font-size:15.5px;line-height:1.6;
+  color:var(--ink);background:transparent;border:1px solid var(--rule);
+  border-radius:var(--ctl);padding:9px 10px;
+}
+.sym{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{
+  border:1px solid var(--rule);background:transparent;color:var(--ink);
+  font-family:var(--f-body);font-size:13.5px;padding:7px 11px;border-radius:var(--pill);cursor:pointer;
+}
+.chip[aria-pressed="true"]{background:var(--alert-soft);border-color:var(--alert);color:var(--alert)}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:46px;padding:11px 16px;border-radius:var(--pill);
+  background:var(--accent);border:1px solid var(--accent);color:#F4F1E9;
+  font-family:var(--f-body);font-size:15.5px;font-weight:600;cursor:pointer;
+}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.quiet{background:transparent;border-color:var(--rule);color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.row .btn{flex:1 1 auto;min-width:120px}
+
+/* 趋势 */
+.trend{margin-top:16px;border:1px solid var(--rule);border-radius:var(--card);background:var(--paper);padding:14px 14px 8px;box-shadow:var(--shadow)}
+.trend h2{font-size:15px;font-family:var(--f-num);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.trend .sub{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
+.trend svg{width:100%;height:88px;display:block}
+.axis{display:flex;justify-content:space-between;font-family:var(--f-num);font-size:10.5px;color:var(--muted);margin-top:2px}
+
+/* 记录表 */
+.log{margin-top:16px}
+.log h2{font-size:15px;font-family:var(--f-num);letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--rule);border-radius:var(--card);overflow:hidden;box-shadow:var(--shadow)}
+thead th{
+  font-family:var(--f-num);font-size:11px;letter-spacing:.06em;color:var(--muted);font-weight:600;
+  text-align:right;padding:8px 6px;border-bottom:2px solid var(--rule-strong);white-space:nowrap;
+}
+thead th:first-child{text-align:left}
+tbody td{
+  font-family:var(--f-num);font-size:14px;padding:9px 6px;text-align:right;
+  border-bottom:1px solid var(--rule);vertical-align:top;
+}
+tbody td:first-child{text-align:left;color:var(--muted);font-size:12.5px}
+tbody tr:last-child td{border-bottom:0}
+tbody td .note{display:block;font-family:var(--f-body);font-size:12px;color:var(--muted);text-align:left;margin-top:2px}
+.flag{color:var(--alert)}
+.del{background:none;border:0;color:var(--muted);font-family:var(--f-num);font-size:11px;cursor:pointer;padding:4px}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:22px 0}
+
+.footnote{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:16px;padding:12px 14px;border-left:2px solid var(--rule-strong);background:var(--paper)}
+.disclaim{font-size:12.5px;color:var(--muted);line-height:1.65;margin-top:14px}
+
+.bar{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(100%,520px);z-index:20;
+  background:var(--paper);border-top:1px solid var(--rule);
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;
+  box-shadow:0 -10px 28px -22px rgba(27,33,29,.6);
+}
+.bar .btn{min-height:44px;font-size:14.5px;padding:9px 10px}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(8px);bottom:86px;
+  background:var(--ink);color:var(--paper);font-size:13.5px;padding:9px 15px;border-radius:var(--pill);
+  opacity:0;pointer-events:none;transition:.22s;z-index:60;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media print{
+  body{background:#fff;padding:0}
+  .bar,.tools,.row,.toast{display:none!important}
+  .sheet,.trend,table{box-shadow:none}
+  .wrap{max-width:none;padding:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <div>
+      <h1>每日记录</h1>
+      <p id="todayLine">—</p>
+    </div>
+    <div class="tools">
+      <button class="iconbtn" id="themeBtn" aria-label="切换夜间模式">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160,106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="sheet">
+    <h2>Today / 今天这一笔</h2>
+    <div class="fields">
+      <div class="f wide"><label for="d">日期</label><input id="d" type="date"></div>
+      <div class="f"><label for="wPre">透前体重 kg</label><input id="wPre" inputmode="decimal" placeholder="61.4"></div>
+      <div class="f"><label for="wPost">透后体重 kg</label><input id="wPost" inputmode="decimal" placeholder="59.8"></div>
+      <div class="f"><label for="bp">血压 高/低</label><input id="bp" inputmode="numeric" placeholder="138/78"></div>
+      <div class="f wide">
+        <label for="glu">血糖 mmol/L</label>
+        <div class="glu-row">
+          <input id="glu" inputmode="decimal" placeholder="5.4">
+          <select id="gluAt" aria-label="测血糖的时间点">
+            <option value="">测于</option>
+            <option value="空腹">空腹</option>
+            <option value="早餐后">早餐后</option>
+            <option value="透析前">透析前</option>
+            <option value="透析中">透析中</option>
+            <option value="透析后">透析后</option>
+            <option value="睡前">睡前</option>
+          </select>
+        </div>
+        <p class="glu-warn" id="gluWarn" hidden></p>
+      </div>
+      <div class="f"><label for="urine">尿量 ml</label><input id="urine" inputmode="numeric" placeholder="300"></div>
+      <div class="f"><label for="uf">超滤量 L</label><input id="uf" inputmode="decimal" placeholder="1.8"></div>
+      <div class="f wide"><label>今天的情况</label>
+        <div class="sym" id="sym">
+          <button class="chip" aria-pressed="false" data-s="低血糖">低血糖</button>
+          <button class="chip" aria-pressed="false" data-s="抽筋">抽筋</button>
+          <button class="chip" aria-pressed="false" data-s="低血压">低血压</button>
+          <button class="chip" aria-pressed="false" data-s="发热">发热</button>
+          <button class="chip" aria-pressed="false" data-s="导管红肿">导管红肿</button>
+          <button class="chip" aria-pressed="false" data-s="水肿">水肿</button>
+        </div>
+      </div>
+      <div class="f wide"><label for="note">备注</label><textarea id="note" placeholder="吃了什么、睡得好不好、透析时护士说了什么"></textarea></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="save">存到台账</button>
+      <button class="btn quiet" id="reset">清空</button>
+    </div>
+  </section>
+
+  <section class="trend">
+    <h2>体重走势</h2>
+    <p class="sub" id="trendSub">最近 14 条记录，看有没有越透越涨</p>
+    <svg id="spark" viewBox="0 0 460 88" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div class="axis"><span id="axL">—</span><span id="axR">—</span></div>
+  </section>
+
+  <section class="trend">
+    <h2>血糖走势</h2>
+    <p class="sub" id="gluSub">低于 3.9 的那几条会被标红，红线就是 3.9</p>
+    <svg id="gluSpark" viewBox="0 0 460 88" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div class="axis"><span id="gluAxL">—</span><span id="gluAxR">—</span></div>
+  </section>
+
+  <section class="log">
+    <h2>History / 台账</h2>
+    <table>
+      <thead>
+        <tr><th>日期</th><th>透前</th><th>透后</th><th>血压</th><th>血糖</th><th>超滤</th><th></th></tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="7" class="empty">还没有记录</td></tr></tbody>
+    </table>
+  </section>
+
+  <p class="footnote">
+    记录的作用是让复诊时的医生少问几句、多看一眼趋势。连续几天体重涨得快、反复低血糖、导管口反复红肿，都值得提前说。
+  </p>
+  <p class="disclaim">
+    数据只存在这台设备的浏览器本地。重要记录请用「导出文本」或「备份文件」留一份。本页只做记录，不做诊断。
+  </p>
+</div>
+
+<div class="bar">
+  <button class="btn" id="exportTxt">导出给医生</button>
+  <button class="btn ghost" id="exportJson">备份</button>
+  <button class="btn quiet" id="importBtn">恢复</button>
+  <input type="file" id="importFile" accept="application/json,.json" hidden>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "dialysis.v1";
+  var $ = function(id){ return document.getElementById(id); };
+  var state = { theme:"light", tels:{dialysis:"",doctor:"",family:""}, records:[], meds:[], schedule:{days:[],time:""}, packed:[], visit:{date:"",dept:"",q:""}, backupAt:"" };
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){ var o = JSON.parse(raw); for(var k in o){ if(Object.prototype.hasOwnProperty.call(o,k)) state[k] = o[k]; } }
+    }catch(e){}
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast("这台浏览器不允许本地保存"); }
+  }
+  function toast(m){
+    var t = $("toast"); t.textContent = m; t.classList.add("on");
+    clearTimeout(toast.t); toast.t = setTimeout(function(){ t.classList.remove("on"); }, 1800);
+  }
+  function pad(n){ return n<10 ? "0"+n : ""+n; }
+  function today(){ var d = new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]; }); }
+
+  function applyTheme(){
+    var dark = state.theme === "dark";
+    document.body.classList.toggle("dark", dark);
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#0D1315" : "#F4F1E9");
+  }
+  $("themeBtn").addEventListener("click", function(){
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    applyTheme(); save();
+  });
+
+  var syms = Array.prototype.slice.call(document.querySelectorAll("#sym .chip"));
+  syms.forEach(function(c){
+    c.addEventListener("click", function(){
+      c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    });
+  });
+  function picked(){ return syms.filter(function(c){ return c.getAttribute("aria-pressed")==="true"; }).map(function(c){ return c.dataset.s; }); }
+
+  function sortRecords(){
+    state.records.sort(function(a,b){ return (a.date < b.date) ? -1 : (a.date > b.date) ? 1 : 0; });
+  }
+
+  function renderTable(){
+    var tb = $("tbody");
+    if(!state.records.length){
+      tb.innerHTML = '<tr><td colspan="7" class="empty">还没有记录</td></tr>';
+      return;
+    }
+    var rows = state.records.slice().reverse().map(function(r, i){
+      var idx = state.records.length - 1 - i;
+      var note = "";
+      if(r.symptoms && r.symptoms.length) note += r.symptoms.join("、");
+      if(r.note) note += (note ? "｜" : "") + esc(r.note);
+      return "<tr>" +
+        "<td>" + esc(r.date || "—") + (note ? '<span class="note">' + note + "</span>" : "") + "</td>" +
+        "<td>" + (r.wPre || r.weight || "—") + "</td>" +
+        "<td>" + (r.wPost || "—") + "</td>" +
+        "<td>" + (r.bp || "—") + "</td>" +
+        '<td class="' + (r.glu && parseFloat(r.glu) < 3.9 ? "val-low" : "") + '">' + (r.glu || "—") +
+          (r.gluAt ? '<span class="note">' + esc(r.gluAt) + "</span>" : "") + "</td>" +
+        "<td>" + (r.uf || "—") + "</td>" +
+        '<td><button class="del" data-del="' + idx + '">删</button></td>' +
+      "</tr>";
+    }).join("");
+    tb.innerHTML = rows;
+    Array.prototype.forEach.call(tb.querySelectorAll("[data-del]"), function(b){
+      b.addEventListener("click", function(){
+        if(confirm("删掉这一天的记录？")){
+          state.records.splice(parseInt(b.dataset.del,10),1); save(); renderTable(); renderTrend(); renderGluTrend(); toast("已删除");
+        }
+      });
+    });
+  }
+
+  function renderTrend(){
+    var svg = $("spark");
+    var pts = state.records.filter(function(r){ return r.wPost || r.wPre || r.weight; })
+      .slice(-14).map(function(r){ return parseFloat(r.wPost || r.wPre || r.weight); })
+      .filter(function(n){ return !isNaN(n); });
+    if(pts.length < 2){
+      svg.innerHTML = "";
+      $("axL").textContent = "—"; $("axR").textContent = "—";
+      $("trendSub").textContent = "至少记两条，才能看出走势";
+      return;
+    }
+    var w = 460, h = 88, padX = 6, padY = 12;
+    var min = Math.min.apply(null, pts), max = Math.max.apply(null, pts);
+    var span = (max - min) || 1;
+    var step = (w - padX*2) / (pts.length - 1);
+    var coords = pts.map(function(v, i){
+      var x = padX + step*i;
+      var y = h - padY - ((v - min)/span)*(h - padY*2);
+      return [x, y];
+    });
+    var d = "M" + coords.map(function(c){ return c[0].toFixed(1) + "," + c[1].toFixed(1); }).join("L");
+    svg.innerHTML =
+      '<path d="' + d + '" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>' +
+      coords.map(function(c){ return '<circle cx="' + c[0].toFixed(1) + '" cy="' + c[1].toFixed(1) + '" r="2.4" fill="var(--accent)"/>'; }).join("") +
+      '<line x1="' + padX + '" y1="' + (h-padY) + '" x2="' + (w-padX) + '" y2="' + (h-padY) + '" stroke="var(--rule)" stroke-width="1"/>';
+    $("axL").textContent = "最低 " + min.toFixed(1) + " kg";
+    $("axR").textContent = "最高 " + max.toFixed(1) + " kg";
+    $("trendSub").textContent = "最近 " + pts.length + " 次记录，看有没有越透越涨";
+  }
+
+  /* 低血糖即时提醒：与应急卡、饮食页统一口径，不用果汁 */
+  function syncGluWarn(){
+    var v = parseFloat($("glu").value), w = $("gluWarn");
+    if(!isNaN(v) && v > 0 && v < 3.9){
+      w.innerHTML = "<b>低于 3.9，是低血糖。</b>人清醒：补 15 g 葡萄糖片或少量糖水，15 分钟后复测。人迷糊、叫不醒：侧躺、别喂、打 120。不要用香蕉、橘子、果汁救急，钾太高。";
+      w.hidden = false; $("glu").classList.add("glu-low-num");
+    }else{
+      w.hidden = true; w.textContent = ""; $("glu").classList.remove("glu-low-num");
+    }
+  }
+  $("glu").addEventListener("input", syncGluWarn);
+  $("glu").addEventListener("change", syncGluWarn);
+
+  /* 血糖走势：虚线是 3.9，低于它的点标红 */
+  function renderGluTrend(){
+    var svg = $("gluSpark");
+    var pts = state.records.filter(function(r){ return r.glu && !isNaN(parseFloat(r.glu)); })
+      .slice(-14).map(function(r){ return parseFloat(r.glu); });
+    if(pts.length < 2){
+      svg.innerHTML = "";
+      $("gluAxL").textContent = "—"; $("gluAxR").textContent = "—";
+      $("gluSub").textContent = "至少记两条血糖，才能看出走势";
+      return;
+    }
+    var w = 460, h = 88, padX = 6, padY = 12, LOW = 3.9;
+    var min = Math.min.apply(null, pts.concat([LOW]));
+    var max = Math.max.apply(null, pts.concat([LOW]));
+    var span = (max - min) || 1;
+    var step = (w - padX*2) / (pts.length - 1);
+    var coords = pts.map(function(v, i){
+      return [padX + step*i, h - padY - ((v-min)/span)*(h - padY*2)];
+    });
+    var yLow = h - padY - ((LOW-min)/span)*(h - padY*2);
+    var d = "M" + coords.map(function(c){ return c[0].toFixed(1) + "," + c[1].toFixed(1); }).join("L");
+    svg.innerHTML =
+      '<line x1="' + padX + '" y1="' + yLow.toFixed(1) + '" x2="' + (w-padX) + '" y2="' + yLow.toFixed(1) + '" stroke="var(--alert)" stroke-width="1.2" stroke-dasharray="5 4"/>' +
+      '<path d="' + d + '" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>' +
+      coords.map(function(c, i){ return '<circle cx="' + c[0].toFixed(1) + '" cy="' + c[1].toFixed(1) + '" r="2.6" fill="' + (pts[i] < LOW ? "var(--alert)" : "var(--accent)") + '"/>'; }).join("") +
+      '<line x1="' + padX + '" y1="' + (h-padY) + '" x2="' + (w-padX) + '" y2="' + (h-padY) + '" stroke="var(--rule)" stroke-width="1"/>';
+    $("gluAxL").textContent = "最低 " + Math.min.apply(null, pts).toFixed(1);
+    $("gluAxR").textContent = "最高 " + Math.max.apply(null, pts).toFixed(1);
+    $("gluSub").textContent = "最近 " + pts.length + " 次，虚线是 3.9，低于它的点标红";
+  }
+
+  $("save").addEventListener("click", function(){
+    var rec = {
+      date: $("d").value || today(),
+      wPre: $("wPre").value.trim(),
+      wPost: $("wPost").value.trim(),
+      bp: $("bp").value.trim(),
+      glu: $("glu").value.trim(),
+      gluAt: $("gluAt").value,
+      urine: $("urine").value.trim(),
+      uf: $("uf").value.trim(),
+      symptoms: picked(),
+      note: $("note").value.trim()
+    };
+    if(!rec.wPre && !rec.wPost && !rec.bp && !rec.glu && !rec.note && !rec.symptoms.length){
+      toast("先填一项再存"); return;
+    }
+    state.records.push(rec); sortRecords(); save();
+    renderTable(); renderTrend(); renderGluTrend(); reset();
+    toast("存好了");
+  });
+  function reset(){
+    ["wPre","wPost","bp","glu","urine","uf","note"].forEach(function(id){ $(id).value = ""; });
+    $("gluAt").value = "";
+    syms.forEach(function(c){ c.setAttribute("aria-pressed","false"); });
+    syncGluWarn();
+  }
+  $("reset").addEventListener("click", reset);
+
+  function download(name, content, type){
+    var blob = new Blob([content], {type: type + ";charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  }
+
+  $("exportTxt").addEventListener("click", function(){
+    if(!state.records.length){ toast("还没有记录"); return; }
+    var lines = ["透析每日记录", "导出：" + new Date().toLocaleString("zh-CN"), ""];
+    state.records.forEach(function(r){
+      lines.push("————————");
+      lines.push("日期：" + r.date);
+      lines.push("透前 " + ((r.wPre || r.weight) || "—") + " kg　透后 " + (r.wPost||"—") + " kg　超滤 " + (r.uf||"—") + " L");
+      lines.push("血压 " + (r.bp||"—") + "　血糖 " + (r.glu||"—") + " mmol/L" + (r.gluAt ? "（" + r.gluAt + "）" : "") + "　尿量 " + (r.urine||"—") + " ml");
+      if(r.symptoms && r.symptoms.length) lines.push("情况：" + r.symptoms.join("、"));
+      if(r.note) lines.push("备注：" + r.note);
+      lines.push("");
+    });
+    download("透析记录_" + today() + ".txt", lines.join("\r\n"), "text/plain");
+    toast("已导出，发给医生");
+  });
+  $("exportJson").addEventListener("click", function(){
+    state.backupAt = new Date().toLocaleString("zh-CN");
+    download("透析记录备份_" + today() + ".json", JSON.stringify(state, null, 2), "application/json");
+    save(); toast("备份已导出");
+  });
+  $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
+  $("importFile").addEventListener("change", function(){
+    var f = this.files && this.files[0]; if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try{
+        var o = JSON.parse(String(r.result));
+        if(!o || !o.records) throw new Error("not backup");
+        state = Object.assign(state, o); save();
+        renderTable(); renderTrend(); applyTheme(); toast("恢复成功");
+      }catch(e){ toast("这个文件不是备份文件"); }
+      $("importFile").value = "";
+    };
+    r.readAsText(f, "utf-8");
+  });
+
+  load();
+  applyTheme();
+  $("d").value = today();
+  $("todayLine").textContent = new Date().toLocaleDateString("zh-CN", { year:"numeric", month:"2-digit", day:"2-digit", weekday:"short" }) + "　记一笔就走";
+  renderTable();
+  renderTrend();
+  renderGluTrend();
+})();
+</script>
+</body>
+</html>

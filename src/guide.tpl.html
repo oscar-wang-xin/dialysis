@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>透析陪护工具 · 使用说明</title>
+<meta name="theme-color" content="#F4F1E9">
+<style>
+:root{
+  --canvas:#F4F1E9;--paper:#FCFAF3;--ink:#1A1E1C;--muted:#6E736B;
+  --line:#DBD4C3;--accent:#1F6E63;--accent-soft:#DFEDE8;--alert:#9E3A2C;--alert-soft:#F3E3DC;
+  --r-card:8px;--r-ctl:6px;--r-pill:999px;
+  --f-title:"Songti SC","Source Han Serif SC","Noto Serif SC","SimSun",Georgia,serif;
+  --f-body:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+  --f-num:ui-monospace,"SF Mono","Consolas",monospace;
+  --shadow:0 1px 2px rgba(26,30,28,.05),0 10px 24px -14px rgba(26,30,28,.2);
+}
+body.dark{
+  --canvas:#0C1214;--paper:#141D1F;--ink:#E8E5DA;--muted:#96A19C;
+  --line:#263133;--accent:#5AA99A;--accent-soft:#17302C;--alert:#D97261;--alert-soft:#2A1A17;
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 24px -14px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--canvas);color:var(--ink);font-family:var(--f-body);font-size:16.5px;line-height:1.7;padding-bottom:44px}
+.wrap{max-width:520px;margin:0 auto;padding:0 18px}
+
+.head{padding:calc(24px + env(safe-area-inset-top)) 0 22px;border-bottom:1px solid var(--line);position:relative}
+.kicker{font-family:var(--f-num);font-size:11px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-family:var(--f-title);font-weight:700;font-size:clamp(30px,8.6vw,38px);line-height:1.14;margin:10px 0 8px;letter-spacing:.01em}
+.lede{font-size:15px;color:var(--muted);max-width:24em}
+.darkbtn{
+  position:absolute;right:0;top:calc(24px + env(safe-area-inset-top));
+  width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--line);
+  background:var(--paper);color:var(--ink);border-radius:var(--r-ctl);cursor:pointer;
+}
+.darkbtn svg{width:18px;height:18px}
+
+/* 三张卡入口 */
+.entry{margin:22px 0 6px}
+.entry h2{font-family:var(--f-num);font-size:11px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.filecard{
+  display:block;text-decoration:none;color:inherit;
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:15px 16px;margin-bottom:9px;box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+}
+.filecard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.filecard .no{font-family:var(--f-num);font-size:11px;color:var(--muted);letter-spacing:.1em}
+.filecard .name{font-size:17.5px;font-weight:700;margin:2px 0 3px}
+.filecard .what{font-size:13.5px;color:var(--muted);line-height:1.55}
+.filecard .go{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--accent)}
+
+/* 章节 */
+.sec{margin-top:30px}
+.sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.sec-no{font-family:var(--f-num);font-size:11px;letter-spacing:.12em;color:var(--accent)}
+.sec-h h2{font-size:20px;font-weight:700;letter-spacing:.01em}
+.sec-h .rule{flex:1;height:1px;background:var(--line);transform:translateY(-3px)}
+
+.steps{list-style:none;counter-reset:s}
+.steps li{
+  counter-increment:s;position:relative;padding-left:30px;margin-bottom:11px;font-size:15.5px;
+}
+.steps li::before{
+  content:counter(s);position:absolute;left:0;top:2px;width:21px;height:21px;display:grid;place-items:center;
+  font-family:var(--f-num);font-size:11.5px;color:var(--accent);background:var(--accent-soft);border-radius:4px;
+}
+.steps li b{font-weight:600}
+.plain li{font-size:15.5px;margin-bottom:8px;color:var(--ink)}
+.plain{list-style:none;padding-left:0}
+.plain li{position:relative;padding-left:18px}
+.plain li::before{content:"—";position:absolute;left:0;color:var(--muted);font-family:var(--f-num);font-size:12px}
+
+.note{
+  background:var(--accent-soft);border-radius:var(--r-card);padding:13px 15px;font-size:14px;line-height:1.65;margin-top:12px;
+}
+.note b{font-weight:700}
+.warn{
+  background:var(--alert-soft);border-left:2px solid var(--alert);border-radius:0 var(--r-card) var(--r-card) 0;
+  padding:13px 15px;font-size:14px;line-height:1.65;margin-top:12px;
+}
+.warn b{color:var(--alert);font-weight:700}
+
+details{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-card);padding:13px 15px;margin-top:9px}
+summary{cursor:pointer;font-size:15.5px;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"＋";font-family:var(--f-num);color:var(--accent);font-size:14px}
+details[open] summary::before{content:"－"}
+details p{font-size:14.5px;color:var(--muted);margin-top:9px;line-height:1.7}
+details p b{color:var(--ink)}
+
+.disclaim{
+  margin-top:34px;padding:15px 16px;border:1px solid var(--line);border-left:2px solid var(--alert);
+  border-radius:var(--r-card);font-size:13.5px;color:var(--muted);line-height:1.65;background:var(--paper);
+}
+.disclaim b{color:var(--ink)}
+.foot{font-family:var(--f-num);font-size:11px;color:var(--muted);letter-spacing:.1em;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <span class="kicker">使用说明 · 给家里照顾的人</span>
+    <h1>先装到桌面，<br>再教一遍怎么用</h1>
+    <p class="lede">三张页面，不用联网，不用注册。装一次，以后点图标就能开。</p>
+    <button class="darkbtn" id="themeBtn" aria-label="切换夜间模式">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160,106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+    </button>
+  </header>
+
+  <section class="entry">
+    <h2>Five pages / 五个页面</h2>
+    <a class="filecard" href="透析陪护综合卡.html">
+      <span class="no">01</span>
+      <div class="name">透析陪护综合卡</div>
+      <div class="what">应急、饮食、记录、陪护工具都在里面，日常主要用这一张。</div>
+      <span class="go">打开 →</span>
+    </a>
+    <a class="filecard" href="透析应急速查卡.html">
+      <span class="no">02</span>
+      <div class="name">透析应急速查卡</div>
+      <div class="what">出事时只看这一页，字大、步骤短，顶上就是 120。</div>
+      <span class="go">打开 →</span>
+    </a>
+    <a class="filecard" href="透析每日记录.html">
+      <span class="no">03</span>
+      <div class="name">透析每日记录</div>
+      <div class="what">像记台账：透前透后体重、血压、血糖、超滤，复诊导出给医生。</div>
+      <span class="go">打开 →</span>
+    </a>
+    <a class="filecard" href="透析知识速查.html">
+      <span class="no">04</span>
+      <div class="name">照护知识</div>
+      <div class="what">护理常识、问题排查，以及医院两张宣教海报上 60 个二维码的标题索引。</div>
+      <span class="go">打开 →</span>
+    </a>
+    <a class="filecard" href="index.html">
+      <span class="no">05</span>
+      <div class="name">工具包封面</div>
+      <div class="what">五个页面的入口，装到桌面时建议收藏这一张。</div>
+      <span class="go">打开 →</span>
+    </a>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><span class="sec-no">01</span><h2>装到手机桌面</h2><span class="rule"></span></div>
+    <ol class="steps">
+      <li>把整个 <b>透析</b> 文件夹传到手机（微信发给自己、或用数据线拷进去都行）。</li>
+      <li>用手机自带的<b>浏览器</b>打开其中的 html 文件。不要在微信里直接点开，微信内置浏览器存不住数据。</li>
+      <li>安卓浏览器：右上角菜单 → <b>添加到主屏幕</b>。<br>苹果 Safari：底部分享按钮 → <b>添加到主屏幕</b>。</li>
+      <li>桌面会出现一个图标，以后点它就能开，断网也能看。</li>
+    </ol>
+    <div class="note"><b>为什么要装到桌面：</b>老人不用记路径，出事时一眼能找到；也避免每次都在聊天记录里翻文件。</div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><span class="sec-no">02</span><h2>头三天要做完的事</h2><span class="rule"></span></div>
+    <ol class="steps">
+      <li>在综合卡「应急」页填好<b>透析中心、主治医生、家属</b>三个号码，点保存。号码会变成可点的链接。</li>
+      <li>在「陪护」页把<b>正在吃的药</b>逐条加进去：药名、时间、几片、要不要随餐。特别是磷结合剂和降压药。</li>
+      <li>选好<b>每周哪几天透析</b>、上午还是下午。</li>
+      <li>在「记录」页存第一条，把今天的体重和血压记下来，形成习惯。</li>
+      <li>点一次<b>导出备份文件</b>，存到微信收藏或网盘，换手机时用得上。</li>
+      <li>打开一次「照护知识」，知道 60 条宣教链接在哪儿；其中 4 条标题被海报反光挡了，方便时对照原图确认。</li>
+    </ol>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><span class="sec-no">03</span><h2>每天怎么用</h2><span class="rule"></span></div>
+    <ul class="plain">
+      <li><b>早上：</b>上完厕所、空腹称重 → 打开「记录」填体重、血压 → 保存，两分钟。</li>
+      <li><b>做饭前：</b>翻「饮食」，确认今天的菜要不要焯水、汤算不算水。</li>
+      <li><b>出门透析前：</b>开「陪护」，把打包清单一条条勾上，回来点"全部取消"。</li>
+      <li><b>吃药时：</b>对照「陪护」里的药单，别凭记忆。</li>
+      <li><b>复诊前：</b>「记录」里点"导出给医生"，把文字发过去或打印出来。</li>
+      <li><b>拿不准的时候：</b>翻「照护知识」的常识卡和排查清单；它只提醒该记什么、该问谁，不替你下结论。</li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><span class="sec-no">04</span><h2>出事时怎么用</h2><span class="rule"></span></div>
+    <ul class="plain">
+      <li>直接开<b>应急速查卡</b>，从上往下找到对应的那条，照着做。</li>
+      <li>能打电话就先打：透析中心不通就打 120，别在页面上犹豫。</li>
+      <li>出血的，一只手按住，另一只手打电话。</li>
+      <li>人叫不醒的，<b>不要喂任何东西</b>，侧躺等救护车。</li>
+    </ul>
+    <div class="warn"><b>页面只是提醒：</b>它不会替你判断病情。真正决定怎么处理的是透析室护士和肾内科医生。</div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><span class="sec-no">05</span><h2>数据会不会丢</h2><span class="rule"></span></div>
+    <p style="font-size:15.5px;color:var(--muted)">所有内容存在这台设备的浏览器里，<b style="color:var(--ink)">不上传任何服务器</b>。清理浏览器缓存、换手机、卸载浏览器，数据就没了。所以：</p>
+    <ul class="plain" style="margin-top:8px">
+      <li>每周点一次「导出备份文件」，存到微信收藏。</li>
+      <li>换手机时，在新手机上打开同一个页面 → 「恢复」→ 选那个 json 文件。</li>
+      <li>复诊前导出文本，等于给医生留了一份纸质之外的副本。</li>
+    </ul>
+
+    <details>
+      <summary>保存了，第二天打开却不见了</summary>
+      <p>多半是<b>微信里直接打开的</b>，或者浏览器关了"本地存储"。请改用手机自带浏览器（Safari / Chrome / 华为浏览器），并添加到主屏幕后再用。</p>
+    </details>
+    <details>
+      <summary>点了号码没反应</summary>
+      <p>号码没填，或者是空链接。回到综合卡「应急」页的"填写 / 修改号码"，填完点保存。填好后号码会变成青绿色，可以直接点。</p>
+    </details>
+    <details>
+      <summary>夜里看太亮</summary>
+      <p>右上角的月亮按钮切换夜间模式，会记住选择。应急速查卡本身是深色的，夜里不刺眼。</p>
+    </details>
+    <details>
+      <summary>能不能打印出来贴墙上</summary>
+      <p>可以。用电脑浏览器打开应急卡或记录页，按 Ctrl+P 打印。记录页已经做了打印样式，按钮和工具栏不会印出来。</p>
+    </details>
+  </section>
+
+  <div class="disclaim">
+    <b>免责说明：</b>本套页面是家庭照护的辅助工具，内容依据常见的透析居家照护要点整理，仅作提醒与记录使用，<b>不构成诊断、处方或治疗方案</b>。每个人的干体重、血钾基线、用药方案都不同，一切以主管肾内科医生和透析中心的意见为准。出现大出血、意识不清、呼吸困难、持续胸痛，立即拨打 120。
+  </div>
+
+  <p class="foot">v2.0 · dialysis.v1 · 离线可用</p>
+</div>
+
+<script>
+(function(){
+  var KEY = "dialysis.v1";
+  var btn = document.getElementById("themeBtn");
+  function applyTheme(dark){ document.body.classList.toggle("dark", dark); }
+  var dark = false;
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw){ var s = JSON.parse(raw); dark = s.theme === "dark"; }
+  }catch(e){}
+  applyTheme(dark);
+  btn.addEventListener("click", function(){
+    dark = !document.body.classList.contains("dark");
+    applyTheme(dark);
+    try{
+      var raw = localStorage.getItem(KEY);
+      var s = raw ? JSON.parse(raw) : {};
+      s.theme = dark ? "dark" : "light";
+      localStorage.setItem(KEY, JSON.stringify(s));
+    }catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

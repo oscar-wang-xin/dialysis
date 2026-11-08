@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>透析应急速查 · 出事看这一页</title>
+<meta name="theme-color" content="#101A17">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:#0F1613;
+  color:#EDE9DC;
+  font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+  font-size:18px;line-height:1.62;
+  padding-bottom:30px;
+}
+.sheet{max-width:520px;margin:0 auto;padding:0 18px}
+
+/* 顶部：黑绿底 + 一条红胶带 */
+.top{
+  position:relative;
+  padding:calc(22px + env(safe-area-inset-top)) 0 20px;
+  border-bottom:1px solid rgba(237,233,220,.16);
+}
+.tape{
+  display:inline-block;
+  background:#A83A2C;color:#FBF1E9;
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-family:ui-monospace,monospace;
+  padding:5px 10px;transform:rotate(-1.2deg);
+}
+h1{
+  font-family:"Songti SC","Source Han Serif SC","Noto Serif SC","SimSun",Georgia,serif;
+  font-size:clamp(34px,10vw,46px);line-height:1.08;margin:14px 0 8px;letter-spacing:.01em;
+}
+.sub{font-size:15px;color:#9DAAA4;max-width:22em}
+.callrow{display:flex;gap:8px;margin-top:18px}
+.callrow a{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  text-decoration:none;font-weight:700;font-size:17px;
+  min-height:54px;border-radius:8px;
+}
+.callrow a.primary{background:#F3EFE4;color:#151C18;flex:1.2}
+.callrow a.ghost{background:transparent;color:#EDE9DC;border:1px solid rgba(237,233,220,.3)}
+.callrow svg{width:19px;height:19px}
+.callrow a.primary svg{color:#A83A2C}
+
+/* 四步总则 */
+.rule{
+  margin:18px 0 6px;border:1px solid rgba(237,233,220,.16);border-radius:8px;
+  padding:14px 15px;background:rgba(237,233,220,.03);
+}
+.rule h2{font-size:14px;letter-spacing:.14em;color:#8FA39A;font-family:ui-monospace,monospace;text-transform:uppercase;margin-bottom:8px}
+.rule p{font-size:16px;color:#C9CFC6}
+.rule p b{color:#EDE9DC}
+
+/* 场景块 */
+.case{padding:22px 0 20px;border-bottom:1px solid rgba(237,233,220,.14)}
+.case-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.idx{font-family:ui-monospace,monospace;font-size:12px;letter-spacing:.1em;color:#7E8F87}
+.case h3{font-family:"Songti SC","Source Han Serif SC","Noto Serif SC",serif;font-size:25px;line-height:1.2;letter-spacing:.01em}
+.badge{margin-left:auto;font-size:11px;letter-spacing:.12em;color:#F0B7A9;border:1px solid #A83A2C;padding:2px 7px;border-radius:4px;font-family:ui-monospace,monospace;white-space:nowrap}
+.badge.warn{color:#8FA39A;border-color:rgba(237,233,220,.25)}
+.signs{font-size:16px;color:#96A29C;margin:6px 0 12px}
+.signs b{color:#EDE9DC;font-weight:600}
+ol{list-style:none;counter-reset:n}
+ol li{
+  counter-increment:n;position:relative;padding-left:34px;margin-bottom:10px;
+  font-size:17px;line-height:1.55;color:#E4DFD2;
+}
+ol li::before{
+  content:counter(n);position:absolute;left:0;top:1px;
+  width:24px;height:24px;display:grid;place-items:center;
+  font-family:ui-monospace,monospace;font-size:12px;color:#0F1613;background:#C7CFC4;border-radius:4px;
+}
+.avoid{
+  margin-top:12px;padding:10px 12px;border-left:2px solid #A83A2C;background:rgba(168,58,44,.12);
+}
+.avoid span{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.16em;color:#E08A7A;display:block;margin-bottom:2px}
+.avoid p{font-size:15.5px;color:#DCD5C7}
+
+/* 底部急救电话 */
+.tail{margin-top:26px;font-size:14px;color:#7F8D86;line-height:1.6}
+.tail b{color:#C9CFC6}
+.sosbar{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(100%,520px);
+  display:grid;grid-template-columns:1fr 1fr;gap:0;z-index:10;
+  background:#141E1A;border-top:1px solid rgba(237,233,220,.16);
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+}
+.sosbar a{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:50px;border-radius:6px;text-decoration:none;font-weight:700;font-size:16px;
+}
+.sosbar a:first-child{background:#A83A2C;color:#FBF1E9;margin-right:8px}
+.sosbar a:last-child{background:rgba(237,233,220,.1);color:#EDE9DC}
+.sosbar svg{width:18px;height:18px}
+body{padding-bottom:120px}
+
+@media (min-width:520px){
+  .sheet{padding:0 24px}
+}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <header class="top">
+    <span class="tape">紧急时只看这一页</span>
+    <h1>出事怎么办</h1>
+    <p class="sub">先按住、先打电话，别自己在家想。七种情况，从上往下找。</p>
+    <div class="callrow">
+      <a class="primary" href="tel:120">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M144.27,45.93a8,8,0,0,1,9.8-5.66,86.22,86.22,0,0,1,61.66,61.66,8,8,0,0,1-5.66,9.8A8.23,8.23,0,0,1,208,112a8,8,0,0,1-7.73-5.94,70.35,70.35,0,0,0-50.33-50.33A8,8,0,0,1,144.27,45.93Zm-2.33,41.8c13.79,3.68,22.65,12.54,26.33,26.33A8,8,0,0,0,176,120a8.23,8.23,0,0,0,2.07-.27,8,8,0,0,0,5.66-9.8c-5.12-19.16-18.5-32.54-37.66-37.66a8,8,0,1,0-4.13,15.46Zm81.94,95.35A56.26,56.26,0,0,1,168,232C88.6,232,24,167.4,24,88A56.26,56.26,0,0,1,72.92,32.12a16,16,0,0,1,16.62,9.52l21.12,47.15,0,.12A16,16,0,0,1,109.39,104c-.18.27-.37.52-.57.77L88,129.45c7.49,15.22,23.41,31,38.83,38.51l24.34-20.71a8.12,8.12,0,0,1,.75-.56,16,16,0,0,1,15.17-1.4l.13.06,47.11,21.11A16,16,0,0,1,223.88,183.08Zm-15.88-2s-.07,0-.11,0h0l-47-21.05-24.35,20.71a8.44,8.44,0,0,1-.74.56,16,16,0,0,1-15.75,1.14c-18.73-9.05-37.4-27.58-46.46-46.11a16,16,0,0,1,1-15.7,6.13,6.13,0,0,1,.57-.77L96,95.15l-21-47a.61.61,0,0,1,0-.12A40.2,40.2,0,0,0,40,88,128.14,128.14,0,0,0,168,216,40.21,40.21,0,0,0,208,181.07Z"/></svg>
+        打 120
+      </a>
+      <a class="ghost" id="callCenter" href="tel:">透析中心</a>
+    </div>
+  </header>
+
+  <section class="rule">
+    <h2>四条总则</h2>
+    <p><b>一、先打电话。</b>透析中心打不通就打 120。</p>
+    <p><b>二、出血就按住。</b>压住不松手，直到医生接手。</p>
+    <p><b>三、人不清楚就别喂。</b>喂水喂糖会呛进气管。</p>
+    <p><b>四、把药单和化验单带上。</b>医生问的都在上面。</p>
+  </section>
+
+  <article class="case">
+    <div class="case-head"><span class="idx">01</span><h3>透析中低血糖</h3><span class="badge">危</span></div>
+    <p class="signs"><b>样子：</b>心慌、出冷汗、手抖、发软、头晕、反应变慢、叫不大应</p>
+    <ol>
+      <li>正在透析：<b>马上叫护士</b>，别自己下床找糖。</li>
+      <li>告诉护士：有没有糖尿病、今天吃没吃降糖药、上次血糖多少。</li>
+      <li>下机后或在家、人清醒：测血糖，低于 3.9 补 15 克葡萄糖片。</li>
+      <li>15 分钟复测；人要是迷糊了，侧躺、别喂、打 120。</li>
+    </ol>
+    <div class="avoid"><span>不要</span><p>不要猛灌糖水；不要自己加药减药；不要用香蕉橘子救急。</p></div>
+  </article>
+
+  <article class="case">
+    <div class="case-head"><span class="idx">02</span><h3>导管感染 · 寒战发烧</h3><span class="badge">危</span></div>
+    <p class="signs"><b>样子：</b>打寒战、发烧、浑身酸痛；管口红、渗黄水、一按就疼</p>
+    <ol>
+      <li>透析时发冷发热：立刻告诉当班护士，这是最典型的时机。</li>
+      <li>在家：量体温、记时间，<b>当天</b>联系透析中心。</li>
+      <li>拍一张管口的照片，护士一看就明白。</li>
+      <li>敷料湿了松了，让护士换。</li>
+    </ol>
+    <div class="avoid"><span>不要</span><p>不要挤脓、涂药膏、自己拔管；不要泡澡。</p></div>
+  </article>
+
+  <article class="case">
+    <div class="case-head"><span class="idx">03</span><h3>导管滑脱 · 大出血</h3><span class="badge">最急</span></div>
+    <p class="signs"><b>样子：</b>管口涌血、纱布很快浸透、管子被拽出来</p>
+    <ol>
+      <li>拿干净纱布或毛巾，<b>持续用力压住出口</b>。</li>
+      <li>不松手，喊人打 120，另一只手继续压。</li>
+      <li>让老人平躺、保暖，别让他坐起来看。</li>
+      <li>一路压到医院。</li>
+    </ol>
+    <div class="avoid"><span>不要</span><p>不要抬手看止没止住；不要往管口塞纸；不要往回推管子。</p></div>
+  </article>
+
+  <article class="case">
+    <div class="case-head"><span class="idx">04</span><h3>内瘘出血 · 摸不到震颤</h3><span class="badge warn">急</span></div>
+    <p class="signs"><b>样子：</b>穿刺点渗血不止；手摸瘘管没有"嗡嗡"的震感</p>
+    <ol>
+      <li>纱布压住穿刺点，力度以<b>还能摸到震颤</b>为准。</li>
+      <li>压 10 到 15 分钟，中途别反复松手。</li>
+      <li>止不住，或摸不到震颤，立刻去透析中心。</li>
+    </ol>
+    <div class="avoid"><span>不要</span><p>不要在上臂死勒止血带；不要热敷。</p></div>
+  </article>
+
+  <article class="case">
+    <div class="case-head"><span class="idx">05</span><h3>高钾 · 手脚发麻胸闷</h3><span class="badge">危</span></div>
+    <p class="signs"><b>样子：</b>嘴和手脚发麻、胸闷心慌、心跳乱、浑身没劲</p>
+    <ol>
+      <li>立刻停止进食进水，桌上东西撤走。</li>
+      <li>马上联系透析中心；有胸闷心悸，直接去急诊。</li>
+      <li>带上最近一次血钾化验单。</li>
+    </ol>
+    <div class="avoid"><span>不要</span><p>不要吃偏方、喝汤；不要碰香蕉、橙子、土豆、菌菇、低钠盐。</p></div>
+  </article>
+
+  <article class="case">
+    <div class="case-head"><span class="idx">06</span><h3>透析后低血压</h3><span class="badge warn">注意</span></div>
+    <p class="signs"><b>样子：</b>下机后头晕、眼前发黑、出虚汗、站不稳</p>
+    <ol>
+      <li>就地坐下或平躺，腿垫高。</li>
+      <li>小口温水，别一次灌一大杯。</li>
+      <li>20 分钟还晕，回透析室，别自己回家。</li>
+    </ol>
+    <div class="avoid"><span>不要</span><p>不要起身快走；不要洗热水澡。</p></div>
+  </article>
+
+  <article class="case">
+    <div class="case-head"><span class="idx">07</span><h3>抽筋 · 透析中难受</h3><span class="badge warn">注意</span></div>
+    <p class="signs"><b>样子：</b>小腿或脚趾抽紧、疼得冒汗</p>
+    <ol>
+      <li>告诉护士，可能要放慢超滤。</li>
+      <li>热敷、轻轻揉，不要把腿掰直硬拉。</li>
+      <li>回家后记一笔，复诊时说一下。</li>
+    </ol>
+  </article>
+
+  <p class="tail">
+    <b>提醒：</b>这一页只教第一时间怎么应对。所有病情判断、用药和透析方案，听肾内科和透析中心的。管口红、体温、血糖这些数，记下来带给医生看。
+  </p>
+  <p class="tail" style="margin-top:10px">没有设置透析中心号码？回到「透析陪护综合卡」，在应急页填写，这里也会同步。</p>
+  <p class="tail" style="margin-top:10px">平时想看护理常识和宣教资料，翻工具包里的「照护知识」页。出事的时候不用查，照着上面做、先打电话。</p>
+</div>
+
+<div class="sosbar">
+  <a href="tel:120">
+    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M144.27,45.93a8,8,0,0,1,9.8-5.66,86.22,86.22,0,0,1,61.66,61.66,8,8,0,0,1-5.66,9.8A8.23,8.23,0,0,1,208,112a8,8,0,0,1-7.73-5.94,70.35,70.35,0,0,0-50.33-50.33A8,8,0,0,1,144.27,45.93Zm-2.33,41.8c13.79,3.68,22.65,12.54,26.33,26.33A8,8,0,0,0,176,120a8.23,8.23,0,0,0,2.07-.27,8,8,0,0,0,5.66-9.8c-5.12-19.16-18.5-32.54-37.66-37.66a8,8,0,1,0-4.13,15.46Zm81.94,95.35A56.26,56.26,0,0,1,168,232C88.6,232,24,167.4,24,88A56.26,56.26,0,0,1,72.92,32.12a16,16,0,0,1,16.62,9.52l21.12,47.15,0,.12A16,16,0,0,1,109.39,104c-.18.27-.37.52-.57.77L88,129.45c7.49,15.22,23.41,31,38.83,38.51l24.34-20.71a8.12,8.12,0,0,1,.75-.56,16,16,0,0,1,15.17-1.4l.13.06,47.11,21.11A16,16,0,0,1,223.88,183.08Zm-15.88-2s-.07,0-.11,0h0l-47-21.05-24.35,20.71a8.44,8.44,0,0,1-.74.56,16,16,0,0,1-15.75,1.14c-18.73-9.05-37.4-27.58-46.46-46.11a16,16,0,0,1,1-15.7,6.13,6.13,0,0,1,.57-.77L96,95.15l-21-47a.61.61,0,0,1,0-.12A40.2,40.2,0,0,0,40,88,128.14,128.14,0,0,0,168,216,40.21,40.21,0,0,0,208,181.07Z"/></svg>
+    120 急救
+  </a>
+  <a id="callFamily" href="tel:">叫家属</a>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function readTels(){
+    var d = "", f = "";
+    try{
+      var raw = localStorage.getItem("dialysis.v1");
+      if(raw){ var s = JSON.parse(raw); if(s && s.tels){ d = s.tels.dialysis || ""; f = s.tels.family || ""; } }
+    }catch(e){}
+    var btn = $("callCenter");
+    if(d){
+      btn.textContent = d;
+      btn.href = "tel:" + d.replace(/\s/g, "");
+    }else{
+      btn.textContent = "透析中心";
+      btn.href = "tel:";
+    }
+    var fam = $("callFamily");
+    if(f){
+      fam.textContent = "家属 " + f;
+      fam.href = "tel:" + f.replace(/\s/g, "");
+    }
+  }
+  readTels();
+})();
+</script>
+</body>
+</html>

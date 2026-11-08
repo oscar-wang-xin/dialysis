@@ -27,6 +27,7 @@ dialysisCare-*.csv
 *备份*.json
 *备份*.csv
 *记录导出*.csv
+透析记录_*.txt
 *-backup-*.json
 
 # 浏览器本地数据、临时还原快照
@@ -67,9 +68,10 @@ patch_*.py
 playwright-report/
 test-results/
 
-# 注意：根目录 index.html 是构建产物，也是给使用者双击即用的成品，
-# 必须提交，不能放进 dist/ 或忽略列表。修改源码后运行 python tools/build.py 重新生成。
+# 注意：根目录 6 个 HTML 既是构建产物，也是给使用者双击即用的成品，
+# 必须提交，不能放进 dist/ 或忽略列表。修改 src/*.tpl.html 后运行
+# python tools/build.py 重新生成，别直接改根目录成品。
 
 # ========== 五、应当提交的文件（白名单备忘，非 git 规则） ==========
-# index.html  src/  data/*.json  docs/  tools/  skill/
+# 根目录 6 个 .html  src/*.tpl.html  data/*.json  docs/  tools/  skill/
 # README.md  CHANGELOG.md  LICENSE  .gitignore  .gitattributes

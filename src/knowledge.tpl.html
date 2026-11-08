@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>透析照护知识 · 宣教与用药索引</title>
+<meta name="theme-color" content="#16302B">
+<style>
+/* 与综合卡同一套设计变量：暖纸底 + 生理盐水青 + 碘伏砖红 */
+:root{
+  --canvas:#F4F1E9;--canvas-2:#EAE5D7;--surface:#FFFCF5;--surface-2:#F8F3E7;
+  --world:#16302B;--accent:#1F6E63;--accent-soft:#DFEDE8;
+  --ink:#1A1E1C;--muted:#6E736B;--line:#D8D2C2;--alert:#9E3A2C;--alert-soft:#F2E2DB;
+  --r-shell:22px;--r-card:8px;--r-ctl:6px;--r-pill:999px;
+  --shadow-card:0 1px 2px rgba(22,48,43,.05),0 8px 20px -8px rgba(22,48,43,.12),0 26px 48px -28px rgba(22,48,43,.18);
+  --f-display:"Songti SC","Source Han Serif SC","Noto Serif SC","SimSun",Georgia,serif;
+  --f-body:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,sans-serif;
+  --f-num:ui-monospace,"SF Mono","Consolas","Roboto Mono",monospace;
+}
+body.dark{
+  color-scheme:dark;
+  --canvas:#0C1214;--canvas-2:#080D0F;--surface:#141D1F;--surface-2:#182225;
+  --world:#091614;--accent:#5AA99A;--accent-soft:#17302C;
+  --ink:#E8E5DA;--muted:#94A09B;--line:#263133;--alert:#D97261;--alert-soft:#2A1A17;
+  --shadow-card:0 1px 0 rgba(255,255,255,.04) inset,0 8px 22px -10px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--canvas);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.62;padding-bottom:44px;transition:background-color .25s ease,color .25s ease}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.shell{max-width:520px;margin:0 auto;min-height:100vh;background:var(--canvas)}
+
+.hero{
+  position:relative;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 46px),
+    radial-gradient(120% 90% at 88% 0%,rgba(90,169,154,.22) 0%,transparent 62%),
+    var(--world);
+  color:#F3EFE4;padding:calc(18px + env(safe-area-inset-top)) 20px 24px;
+  border-radius:0 0 var(--r-shell) var(--r-shell);overflow:hidden;
+}
+.hero-bar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mark{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(243,239,228,.62);font-family:var(--f-num)}
+.hero-tools{display:flex;gap:8px;align-items:center}
+.iconbtn{
+  width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;
+  border:1px solid rgba(243,239,228,.22);border-radius:var(--r-ctl);
+  background:rgba(243,239,228,.06);color:#F3EFE4;cursor:pointer;text-decoration:none;
+}
+.iconbtn svg{width:20px;height:20px}
+.hero h1{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,8.4vw,38px);line-height:1.12;letter-spacing:.01em;margin:14px 0 6px}
+.hero-sub{font-size:14.5px;color:rgba(243,239,228,.72);max-width:22em}
+.hero-foot{margin-top:18px;border-top:1px solid rgba(243,239,228,.16);padding-top:13px;font-size:12.5px;line-height:1.6;color:rgba(243,239,228,.62)}
+.hero-foot b{color:#F3EFE4}
+
+main{padding:0 16px 8px}
+.sec-head{display:flex;align-items:baseline;gap:10px;margin:26px 0 12px}
+.sec-num{font-family:var(--f-num);font-size:11px;letter-spacing:.12em;color:var(--accent)}
+.sec-title{font-size:20px;font-weight:700;letter-spacing:.01em}
+.sec-rule{flex:1;height:1px;background:var(--line);transform:translateY(-3px)}
+.sec-note{font-size:13px;color:var(--muted);margin:-4px 0 14px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px 16px 15px;margin-bottom:12px;box-shadow:var(--shadow-card)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.card-title{font-size:17.5px;font-weight:700;letter-spacing:.01em}
+.meta{font-family:var(--f-num);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+
+/* 搜索 */
+.search{position:relative;margin-top:18px}
+.search input{
+  width:100%;font-family:var(--f-body);font-size:16px;color:var(--ink);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);
+  padding:12px 42px 12px 18px;box-shadow:var(--shadow-card);
+}
+.search input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.search .clr{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:36px;height:36px;display:none;place-items:center;border:0;background:transparent;
+  color:var(--muted);font-size:19px;cursor:pointer;border-radius:var(--r-pill);
+}
+.search .clr.on{display:grid}
+.search-echo{font-size:13px;color:var(--muted);margin-top:8px;padding-left:4px}
+
+/* 折叠式常识卡 */
+details.fold{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:13px 15px;margin-bottom:9px;box-shadow:var(--shadow-card)}
+details.fold summary{cursor:pointer;font-size:16px;font-weight:600;list-style:none;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary::before{content:"＋";font-family:var(--f-num);color:var(--accent);font-size:15px;flex:0 0 auto}
+details.fold[open] summary::before{content:"－"}
+details.fold .body{font-size:14.5px;color:var(--muted);margin-top:10px;line-height:1.7;padding-left:24px}
+details.fold .ask{margin-top:9px;padding-left:24px;font-size:13.5px;color:var(--accent);line-height:1.6}
+details.fold .ask b{font-weight:700}
+.idx{font-family:var(--f-num);font-size:11px;color:var(--muted);letter-spacing:.08em}
+
+/* 三级排查 */
+.lv{border-left:3px solid var(--line)}
+.lv.red{border-left-color:var(--alert)}
+.lv.amber{border-left-color:#B07B2C}
+.lv.green{border-left-color:var(--accent)}
+.lv .card-head{margin-bottom:8px}
+.lv h3{font-size:16.5px;font-weight:700;line-height:1.45}
+.lv.red h3{color:var(--alert)}
+.lv ul{list-style:none;padding-left:0}
+.lv li{position:relative;padding-left:18px;font-size:14.5px;color:var(--muted);margin:5px 0;line-height:1.6}
+.lv li::before{content:"—";position:absolute;left:0;color:var(--muted);font-family:var(--f-num);font-size:12px}
+.lv .step{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);font-size:14px;line-height:1.65}
+.lv .step b{color:var(--ink)}
+.calltag{display:inline-block;font-family:var(--f-num);font-size:11px;letter-spacing:.1em;padding:3px 8px;border-radius:var(--r-ctl);background:var(--accent-soft);color:var(--accent);margin-top:9px}
+.lv.red .calltag{background:var(--alert-soft);color:var(--alert)}
+
+/* 排查清单表格 */
+.chk{width:100%;border-collapse:collapse;font-size:14px}
+.chk th{font-family:var(--f-num);font-size:11px;letter-spacing:.06em;color:var(--muted);text-align:left;padding:8px 8px 8px 0;border-bottom:2px solid var(--line);font-weight:600}
+.chk td{padding:10px 8px 10px 0;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
+.chk tr:last-child td{border-bottom:0}
+.chk td:first-child{font-weight:600;width:38%}
+
+/* 链接列表 */
+.linklist{list-style:none}
+.linklist li{border-top:1px solid var(--line)}
+.linklist li:first-child{border-top:0}
+.lnk{display:block;text-decoration:none;color:inherit;padding:11px 0;min-height:48px}
+.lnk .lt{font-size:15.5px;font-weight:600;line-height:1.5;color:var(--ink)}
+.lnk .lm{font-family:var(--f-num);font-size:11.5px;color:var(--muted);margin-top:3px;word-break:break-all;line-height:1.5}
+.lnk .lm .no{color:var(--accent);font-weight:600;margin-right:6px}
+.lnk .lm .go{color:var(--accent);margin-left:5px}
+.lnk:hover .lt,.lnk:focus-visible .lt{color:var(--accent)}
+.lnk:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-ctl)}
+.doubt{display:inline-block;font-size:11px;font-weight:700;color:var(--alert);background:var(--alert-soft);border-radius:var(--r-ctl);padding:1px 6px;margin-left:6px;vertical-align:2px}
+.empty{font-size:14px;color:var(--muted);padding:16px 0;text-align:center}
+.group{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:18px 0 8px}
+.group h3{font-size:16px;font-weight:700}
+.group .cnt{font-family:var(--f-num);font-size:11.5px;color:var(--muted)}
+
+.note{background:var(--accent-soft);border-radius:var(--r-card);padding:13px 15px;font-size:14px;line-height:1.65}
+.note b{font-weight:700}
+.warn{background:var(--alert-soft);border-left:2px solid var(--alert);border-radius:0 var(--r-card) var(--r-card) 0;padding:13px 15px;font-size:14px;line-height:1.65}
+.warn b{color:var(--alert);font-weight:700}
+.disclaim{border:1px solid var(--line);border-left:2px solid var(--alert);border-radius:var(--r-card);padding:13px 14px;font-size:13.5px;line-height:1.6;color:var(--muted);background:var(--surface)}
+.disclaim b{color:var(--ink)}
+.foot{font-family:var(--f-num);font-size:11px;letter-spacing:.1em;color:var(--muted);margin-top:22px;text-align:center}
+.backline{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.backline a{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;
+  border-radius:var(--r-pill);border:1px solid var(--accent);background:var(--accent);
+  color:#F4F1E9;text-decoration:none;font-size:15px;font-weight:600;
+}
+.backline a.ghost{background:transparent;color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(10px);bottom:26px;background:var(--world);color:#F3EFE4;font-size:14px;padding:10px 16px;border-radius:var(--r-pill);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media print{
+  html{background:#fff!important}
+  body{background:#fff!important;color:#000!important;padding:0}
+  .shell{max-width:none;background:#fff!important}
+  .hero{background:#fff!important;color:#000;border-radius:0;border-bottom:2px solid #000;padding:12px 0}
+  .hero h1,.hero-sub,.hero-foot,.hero-foot b,.mark{color:#000!important}
+  .iconbtn,.search,.toast,.backline{display:none!important}
+  .card,details.fold{box-shadow:none;border:1px solid #999;break-inside:avoid}
+  details.fold .body,details.fold .ask{display:block!important}
+  .lnk .lm{color:#333}
+  .sec-head{margin:16px 0 8px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="hero">
+    <div class="hero-bar">
+      <span class="mark">家庭照护工具包 · 知识索引</span>
+      <div class="hero-tools">
+        <button class="iconbtn" id="printBtn" aria-label="打印本页" title="打印本页">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208,72H176V40a8,8,0,0,0-8-8H88a8,8,0,0,0-8,8V72H48A16,16,0,0,0,32,88v80a16,16,0,0,0,16,16H64v40a8,8,0,0,0,8,8H184a8,8,0,0,0,8-8V184h16a16,16,0,0,0,16-16V88A16,16,0,0,0,208,72ZM96,48h64V72H96ZM176,216H80V176h96Zm32-48H48V88H208v80Zm-16-52a12,12,0,1,1-12-12A12,12,0,0,1,192,116Z"/></svg>
+        </button>
+        <button class="iconbtn" id="themeBtn" aria-label="切换夜间模式" title="切换夜间模式">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160,106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+        </button>
+      </div>
+    </div>
+    <h1>照护知识</h1>
+    <p class="hero-sub">护理常识、问题排查，以及医院两张宣教海报上 60 个二维码的标题索引。</p>
+    <div class="hero-foot"><b>只做索引，不做判断。</b>链接内容以医院原文为准；用药、剂量、处置一律听透析中心的。</div>
+  </header>
+
+  <main>
+
+    <div class="search">
+      <input id="q" type="search" placeholder="搜药名 / 主题 / 症状" aria-label="搜索知识内容" autocomplete="off">
+      <button class="clr" id="clr" aria-label="清空搜索">×</button>
+    </div>
+    <p class="search-echo" id="echo">共 9 张常识卡、3 级排查、5 条问题清单、60 条海报链接。试试搜「钾」或「苯磺酸」。</p>
+
+    <!-- ========== 01 常识卡 ========== -->
+    <section data-sec="cards">
+      <div class="sec-head"><span class="sec-num">01</span><span class="sec-title">护理常识</span><span class="sec-rule"></span></div>
+      <p class="sec-note">点开看一条。记的是"该记什么、该问谁"，不是病情结论。</p>
+      <div id="cards"><!--DATA_CARDS--></div>
+    </section>
+
+    <!-- ========== 02 三级排查 ========== -->
+    <section data-sec="triage">
+      <div class="sec-head"><span class="sec-num">02</span><span class="sec-title">问题排查</span><span class="sec-rule"></span></div>
+      <p class="sec-note">先对号入座，再决定要不要打电话。急症不要在家观察。</p>
+      <div id="triage"><!--DATA_TRIAGE--></div>
+    </section>
+
+    <!-- ========== 03 排查清单 ========== -->
+    <section data-sec="checklist">
+      <div class="sec-head"><span class="sec-num">03</span><span class="sec-title">常见情况速查</span><span class="sec-rule"></span></div>
+      <div class="card" id="checklist"><!--DATA_CHECKLIST--></div>
+    </section>
+
+    <!-- ========== 04 健康宣教 ========== -->
+    <section data-sec="tree">
+      <div class="sec-head"><span class="sec-num">04</span><span class="sec-title">健康宣教</span><span class="sec-rule"></span></div>
+      <p class="sec-note">医院宣教海报上 22 个二维码，标题按码下方文字逐条辨认。点标题打开链接。</p>
+      <div class="card">
+        <div class="group"><h3>健康宣教二维码树</h3><span class="cnt" id="cntTree">22 条</span></div>
+        <ul class="linklist" id="listTree"><!--DATA_LINKS_TREE--></ul>
+        <p class="empty" id="emptyTree" hidden>没有匹配的条目。</p>
+      </div>
+    </section>
+
+    <!-- ========== 05 常用口服药 ========== -->
+    <section data-sec="drug">
+      <div class="sec-head"><span class="sec-num">05</span><span class="sec-title">常用口服药</span><span class="sec-rule"></span></div>
+      <p class="sec-note">药表 38 条，编号与海报自带 1–38 一致。<b>本页只给药名索引，不提供剂量和用法。</b></p>
+      <div class="card">
+        <div class="group"><h3>重症肾脏病 · 血液净化科常用口服药物一览表</h3><span class="cnt" id="cntDrug">38 条</span></div>
+        <ul class="linklist" id="listDrug"><!--DATA_LINKS_DRUG--></ul>
+        <p class="empty" id="emptyDrug" hidden>没有匹配的条目。</p>
+      </div>
+      <div class="note"><b>查不到要看的药品？</b>海报底部写着：可致电药学部 <b>85323591</b> 帮助查阅。</div>
+      <div class="warn" style="margin-top:10px"><b>链接打不开是正常的：</b><!--DATA_OPENHINT--></div>
+    </section>
+
+    <!-- ========== 06 来源与存疑 ========== -->
+    <section data-sec="source">
+      <div class="sec-head"><span class="sec-num">06</span><span class="sec-title">来源与存疑</span><span class="sec-rule"></span></div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">这些标题是怎么来的</span><span class="meta">source</span></div>
+        <p class="sec-note" style="margin:0 0 10px"><!--DATA_SOURCENOTE--></p>
+        <div id="uncertain"><!--DATA_UNCERTAIN--></div>
+      </div>
+      <div class="disclaim" style="margin-top:12px"><b>免责：</b><!--DATA_DISCLAIMER--></div>
+    </section>
+
+    <div class="backline">
+      <a href="index.html">← 返回工具包</a>
+      <a class="ghost" href="透析陪护综合卡.html">打开综合卡</a>
+    </div>
+    <p class="foot">v2.0 · dialysis.v1 · 离线可用</p>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "dialysis.v1";
+  var $ = function(id){ return document.getElementById(id); };
+
+  function toast(msg){
+    var t = $("toast"); t.textContent = msg; t.classList.add("on");
+    clearTimeout(toast.t); toast.t = setTimeout(function(){ t.classList.remove("on"); }, 1900);
+  }
+
+  /* 夜间模式与工具包其它页面共用 dialysis.v1 */
+  function applyTheme(){
+    var dark = false;
+    try{ var s = JSON.parse(localStorage.getItem(KEY) || "{}"); dark = s.theme === "dark"; }catch(e){}
+    document.body.classList.toggle("dark", dark);
+    $("themeBtn").setAttribute("aria-label", dark ? "切换日间模式" : "切换夜间模式");
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#091614" : "#16302B");
+  }
+  $("themeBtn").addEventListener("click", function(){
+    var dark = !document.body.classList.contains("dark");
+    var s = {};
+    try{ s = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; }catch(e){ s = {}; }
+    s.theme = dark ? "dark" : "light";
+    try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){ toast("这台浏览器不允许保存设置"); }
+    applyTheme();
+  });
+  $("printBtn").addEventListener("click", function(){ window.print(); });
+
+  /* 搜索：过滤常识卡、排查卡、清单行与链接条目 */
+  var q = $("q"), clr = $("clr"), echo = $("echo");
+  var items = Array.prototype.slice.call(document.querySelectorAll("[data-s]"));
+  var sections = Array.prototype.slice.call(document.querySelectorAll("[data-sec]"));
+  function norm(s){ return String(s || "").toLowerCase().replace(/\s+/g, ""); }
+  function filter(){
+    var key = norm(q.value);
+    clr.classList.toggle("on", !!key);
+    var hit = 0;
+    items.forEach(function(el){
+      var ok = !key || norm(el.dataset.s).indexOf(key) >= 0 || norm(el.textContent).indexOf(key) >= 0;
+      el.hidden = !ok;
+      if(ok) hit++;
+      /* 命中时自动展开折叠卡，避免"搜到了却看不见" */
+      if(ok && key && el.tagName === "DETAILS") el.open = true;
+    });
+    sections.forEach(function(sec){
+      var visible = Array.prototype.slice.call(sec.querySelectorAll("[data-s]")).some(function(el){ return !el.hidden; });
+      sec.hidden = !key ? false : !visible;
+    });
+    ["tree","drug"].forEach(function(g){
+      var list = $("list" + g.charAt(0).toUpperCase() + g.slice(1));
+      var n = Array.prototype.slice.call(list.children).filter(function(li){ return !li.hidden; }).length;
+      $("cnt" + g.charAt(0).toUpperCase() + g.slice(1)).textContent = n + " 条";
+      $("empty" + g.charAt(0).toUpperCase() + g.slice(1)).hidden = n > 0;
+    });
+    echo.textContent = key ? ("找到 " + hit + " 条。清空搜索看全部。") : "共 9 张常识卡、3 级排查、5 条问题清单、60 条海报链接。试试搜「钾」或「苯磺酸」。";
+  }
+  q.addEventListener("input", filter);
+  clr.addEventListener("click", function(){ q.value = ""; filter(); q.focus(); });
+
+  applyTheme();
+  filter();
+})();
+</script>
+</body>
+</html>
