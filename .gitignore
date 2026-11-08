@@ -1,0 +1,75 @@
+# dialysis · 透析照护助手
+# 原则：仓库里只能有代码、公开资料与文档，不能有任何真实患者数据。
+# 本工具的全部健康记录都存在使用者本机的 localStorage，导出文件属于个人敏感信息。
+
+# ========== 一、隐私红线：患者与就诊资料，绝不入库 ==========
+# 病历汇编、检查报告、就诊资料（含中文文件名与常见格式）
+*病历*
+*就诊资料*
+*检查报告*
+*.docx
+*.pdf
+*.xlsx
+*.xls
+*.dcm
+*.jpg
+*.jpeg
+*.png
+/private/
+/personal/
+/records/
+
+# 导出/备份文件：含姓名、血糖、血压、化验值等健康数据
+/backups/
+/exports/
+dialysisCare-*.json
+dialysisCare-*.csv
+*备份*.json
+*备份*.csv
+*记录导出*.csv
+*-backup-*.json
+
+# 浏览器本地数据、临时还原快照
+.localstorage*
+*_旧快照*.json
+
+# ========== 二、海报原图：版权未确认，默认不入库 ==========
+# 若已确认可公开分发，用 git add -f assets/posters/xxx.jpg 单独添加；说明文件放行
+/assets/posters/*
+!/assets/posters/README.md
+
+# ========== 三、系统与编辑器 ==========
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-workspace
+
+# ========== 四、语言与构建临时产物 ==========
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.cache/
+*.log
+*.tmp
+_patch_*.py
+patch_*.py
+
+# 浏览器自动化/截图产物（可能含演示记录，别提交）
+.playwright-cli/
+playwright-report/
+test-results/
+
+# 注意：根目录 index.html 是构建产物，也是给使用者双击即用的成品，
+# 必须提交，不能放进 dist/ 或忽略列表。修改源码后运行 python tools/build.py 重新生成。
+
+# ========== 五、应当提交的文件（白名单备忘，非 git 规则） ==========
+# index.html  src/  data/*.json  docs/  tools/  skill/
+# README.md  CHANGELOG.md  LICENSE  .gitignore  .gitattributes

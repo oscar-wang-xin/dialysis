@@ -1,0 +1,955 @@
+/* 透析照护助手 · 应用逻辑
+   零外部依赖。数据只写本机 localStorage，不上传、不预加载外链。 */
+(function(){
+'use strict';
+
+var D = window.APP_DATA || {};
+var CARDS = D.cards || [], TRIAGE = D.triage || [], CHECKS = D.checklists || [];
+var GROUPS = D.groups || {}, SOURCE = D.source || {}, LINKS = D.links || {drug:[],tree:[]};
+var SYMPTOMS = D.symptoms || [], LABNAMES = D.labNames || [], DAILYTYPES = D.dailyTypes || [], GTAGS = D.glucoseTags || [];
+var DISCLAIMER = D.disclaimer || '本工具用于日常护理记录与就诊沟通，不构成医疗建议、不用于诊断或治疗决策。出现急症请立即联系透析中心或拨打 120。';
+var KEY = 'dialysisCare.v1';
+var UI = {view:'today',sub:'daily',q:'',labName:'',trendType:'glucose',trendDays:30,sheet:null};
+var S, storageBroken=false, saveTimer=null, toastTimer=null, clockTimer=null;
+
+/* ---------------- 基础工具 ---------------- */
+function $(s){return document.querySelector(s)}
+function byId(id){return document.getElementById(id)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function pad(n){return (n<10?'0':'')+n}
+function dateOf(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function timeOf(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
+function today(){return dateOf(new Date())}
+function nowTime(){return timeOf(new Date())}
+function num(v){if(v==null||v==='')return null;var n=Number(v);return isFinite(n)?n:null}
+function addDays(ds,n){var d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return dateOf(d)}
+function epochOf(ds,tm){var d=new Date(ds+'T'+(tm||'00:00')+':00');return isNaN(d.getTime())?null:d.getTime()}
+function hhmm(ep){if(!ep)return '';var d=new Date(ep);return pad(d.getHours())+':'+pad(d.getMinutes())}
+function arr(o,k){return (o&&Array.isArray(o[k]))?o[k]:[]}
+function sval(v){return v==null||v===''?'—':esc(v)}
+function attr(v){return esc(v)}
+function opts(list,cur){return list.map(function(o){var v=typeof o==='string'?o:o.key,n=typeof o==='string'?o:o.label;return '<option value="'+attr(v)+'"'+(String(cur)===String(v)?' selected':'')+'>'+esc(n)+'</option>'}).join('')}
+function banner(kind,mark,html){return '<div class="banner '+kind+'"><span class="mark">'+esc(mark)+'</span><div>'+html+'</div></div>'}
+function empty(text){return '<div class="empty">'+esc(text)+'</div>'}
+function card(title,body,cls){return '<div class="card '+(cls||'')+'"><h3>'+esc(title)+'</h3>'+body+'</div>'}
+
+/* ---------------- 状态与存储 ---------------- */
+function defaultState(){return {
+  version:1,
+  profile:{name:'',dryWeight:null,centerName:'',centerPhone:'',emergencyPhone:'120',
+    pharmacyPhone:(SOURCE.pharmacyPhone||''),
+    targets:{glucoseLow:null,sbpHigh:null},
+    monitoring:{intervalMin:null,extraPoints:[],postDialysisCheck:false,prescribedBy:''},
+    highContrast:false,lastBackup:null},
+  daily:[],sessions:[],labs:[],meds:[],medChecks:[],questions:[],linkNotes:{},activeSessionId:null
+}}
+function load(){
+  var d=defaultState();
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(!raw)return d;
+    var o=JSON.parse(raw);
+    if(!o||typeof o!=='object')return d;
+    var s=Object.assign(d,o);
+    s.profile=Object.assign(d.profile,o.profile||{});
+    s.profile.targets=Object.assign(d.profile.targets,(o.profile||{}).targets||{});
+    s.profile.monitoring=Object.assign(d.profile.monitoring,(o.profile||{}).monitoring||{});
+    ['daily','sessions','labs','meds','medChecks','questions'].forEach(function(k){if(!Array.isArray(s[k]))s[k]=[]});
+    if(!s.linkNotes||typeof s.linkNotes!=='object')s.linkNotes={};
+    return s;
+  }catch(e){storageBroken=true;return d}
+}
+function save(quiet){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(S));
+    if(!quiet)toast('已保存');
+  }catch(e){
+    storageBroken=true;
+    toast('本机无法保存，请立即导出 JSON 备份');
+  }
+}
+function debounceSave(){clearTimeout(saveTimer);saveTimer=setTimeout(function(){save(true)},350)}
+function toast(msg){
+  var t=byId('toast');if(!t)return;
+  t.textContent=msg;t.classList.add('on');
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('on')},1900);
+}
+function setPath(obj,path,val){
+  var parts=path.split('.'),o=obj;
+  for(var i=0;i<parts.length-1;i++){if(o[parts[i]]==null||typeof o[parts[i]]!=='object')o[parts[i]]={};o=o[parts[i]]}
+  var last=parts[parts.length-1];
+  if(last==='extraPoints')o[last]=String(val||'').split(/[,，\s]+/).map(num).filter(function(n){return n!=null});
+  else o[last]=val;
+}
+function backupDue(){
+  var b=S.profile.lastBackup;
+  if(!b)return true;
+  var t=new Date(b+'T00:00:00').getTime();
+  if(isNaN(t))return true;
+  return (Date.now()-t)/86400000>7;
+}
+
+/* ---------------- 数据辅助 ---------------- */
+function dailyType(k){for(var i=0;i<DAILYTYPES.length;i++)if(DAILYTYPES[i].key===k)return DAILYTYPES[i];return {key:k,label:k,unit:'',numeric:false}}
+function activeSession(){var id=S.activeSessionId;if(!id)return null;for(var i=0;i<S.sessions.length;i++)if(S.sessions[i].id===id)return S.sessions[i];return null}
+function findById(list,id){for(var i=0;i<(list||[]).length;i++)if(list[i].id===id)return list[i];return null}
+function sessionElapsed(s){if(!s||!s.startEpoch)return null;return Math.max(0,Math.round((Date.now()-s.startEpoch)/60000))}
+function remainOf(s,e){return (s&&s.plannedMin!=null&&e!=null)?s.plannedMin-e:null}
+function sortedPoints(s){return arr(s,'timeline').slice().sort(function(a,b){return (a.elapsedMin==null?99999:a.elapsedMin)-(b.elapsedMin==null?99999:b.elapsedMin)})}
+function allGlucose(){
+  var a=[];
+  S.daily.forEach(function(d){if(d.type==='glucose'&&d.value!=null)a.push({stamp:d.date+' '+(d.time||''),value:d.value,tag:d.tag||'每日记录',from:'每日记录'});});
+  S.sessions.forEach(function(s){arr(s,'timeline').forEach(function(p){if(p.glucose!=null)a.push({stamp:s.date+' '+(p.time||''),value:p.glucose,tag:(p.elapsedMin==null?'监护':('第'+p.elapsedMin+'分钟')),from:'监护会话'})});});
+  a.sort(function(x,y){return x.stamp<y.stamp?-1:(x.stamp>y.stamp?1:0)});
+  return a;
+}
+function lastSymptomPoint(){
+  var out=null;
+  S.sessions.forEach(function(s){arr(s,'timeline').forEach(function(p){if(p.symptom){var k=s.date+' '+(p.time||'');if(!out||k>out.k)out={k:k,s:s,p:p}}})});
+  return out;
+}
+function nextDue(s){
+  var iv=num(S.profile.monitoring.intervalMin);
+  if(!iv||iv<=0)return null;
+  var last=0;arr(s,'timeline').forEach(function(p){if(p.glucose!=null&&p.elapsedMin!=null&&p.elapsedMin>last)last=p.elapsedMin});
+  return last+iv;
+}
+function lowLine(){return num(S.profile.targets.glucoseLow)}
+function markIfLow(g){var l=lowLine();return (l!=null&&g!=null&&g<l)?'低于你设的线':''}
+
+/* ---------------- 图表（手写 SVG） ---------------- */
+var COLORS=['#0891B2','#9A4A0B','#046C4C','#8E1D1D','#123B47','#5D6F7E'];
+var SHAPES=['circle','square','triangle','diamond','cross'];
+function marker(shape,x,y,color){
+  var s=5;
+  if(shape==='square')return '<rect x="'+(x-s)+'" y="'+(y-s)+'" width="'+(2*s)+'" height="'+(2*s)+'" fill="'+color+'" stroke="#fff" stroke-width="1"/>';
+  if(shape==='triangle')return '<polygon points="'+x+','+(y-s-1)+' '+(x-s-1)+','+(y+s)+' '+(x+s+1)+','+(y+s)+'" fill="'+color+'" stroke="#fff" stroke-width="1"/>';
+  if(shape==='diamond')return '<polygon points="'+x+','+(y-s-1)+' '+(x+s+1)+','+y+' '+x+','+(y+s+1)+' '+(x-s-1)+','+y+'" fill="'+color+'" stroke="#fff" stroke-width="1"/>';
+  if(shape==='cross')return '<path d="M'+(x-s)+' '+(y-s)+'L'+(x+s)+' '+(y+s)+'M'+(x+s)+' '+(y-s)+'L'+(x-s)+' '+(y+s)+'" stroke="'+color+'" stroke-width="2.6"/>';
+  return '<circle cx="'+x+'" cy="'+y+'" r="'+s+'" fill="'+color+'" stroke="#fff" stroke-width="1"/>';
+}
+function chartSVG(series,o){
+  o=o||{};
+  var W=o.width||640,H=o.height||250,pl=50,pr=16,pt=16,pb=38;
+  var vals=[],xmax=o.xMax||0;
+  series.forEach(function(s){s.points.forEach(function(p){if(p.y!=null){vals.push(p.y);if(p.x>xmax)xmax=p.x}})});
+  if(!vals.length)return empty('还没有可画的数据。记两笔之后这里会自动出现折线。');
+  var ymin=Math.min.apply(null,vals),ymax=Math.max.apply(null,vals),span=ymax-ymin;
+  if(span<1.5){var mid=(ymin+ymax)/2;ymin=mid-1;ymax=mid+1}else{ymin-=span*.18;ymax+=span*.18}
+  if(o.hline!=null){ymin=Math.min(ymin,o.hline-.5);ymax=Math.max(ymax,o.hline+.5)}
+  if(xmax<=0)xmax=1;
+  function X(v){return pl+(Math.max(0,Math.min(xmax,v))/xmax)*(W-pl-pr)}
+  function Y(v){return pt+(1-(v-ymin)/(ymax-ymin))*(H-pt-pb)}
+  var out='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+attr(o.aria||'血糖趋势图')+'">';
+  out+='<rect x="'+pl+'" y="'+pt+'" width="'+(W-pl-pr)+'" height="'+(H-pt-pb)+'" fill="#FBFEFF" stroke="#D5E8ED"/>';
+  for(var i=0;i<=3;i++){
+    var gy=ymin+(ymax-ymin)*i/3,py=Y(gy);
+    out+='<line x1="'+pl+'" y1="'+py.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+py.toFixed(1)+'" stroke="#E6F0F3"/>';
+    out+='<text x="'+(pl-6)+'" y="'+(py+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#4A6B75">'+gy.toFixed(1)+'</text>';
+  }
+  (o.xTicks||[]).forEach(function(t){
+    var px=X(t.x);
+    out+='<line x1="'+px.toFixed(1)+'" y1="'+pt+'" x2="'+px.toFixed(1)+'" y2="'+(H-pb)+'" stroke="'+(t.color||'#B9D9E1')+'" stroke-dasharray="4 4"/>';
+    if(t.label)out+='<text x="'+(px+3).toFixed(1)+'" y="'+(pt+12)+'" font-size="10" fill="#4A6B75">'+esc(t.label)+'</text>';
+  });
+  if(o.hline!=null){
+    var hy=Y(o.hline);
+    out+='<line x1="'+pl+'" y1="'+hy.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+hy.toFixed(1)+'" stroke="#B45309" stroke-dasharray="7 5" stroke-width="1.6"/>';
+    out+='<text x="'+(W-pr-4)+'" y="'+(hy-5).toFixed(1)+'" text-anchor="end" font-size="11" fill="#B45309">你设的线</text>';
+  }
+  series.forEach(function(s,si){
+    var color=s.color||COLORS[si%COLORS.length],shape=SHAPES[si%SHAPES.length];
+    var pts=s.points.filter(function(p){return p.y!=null}).slice().sort(function(a,b){return a.x-b.x});
+    if(pts.length>1){
+      out+='<polyline points="'+pts.map(function(p){return X(p.x).toFixed(1)+','+Y(p.y).toFixed(1)}).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2.6" stroke-linejoin="round" stroke-dasharray="'+(si%3===2?'6 4':'')+'"/>';
+    }
+    pts.forEach(function(p){
+      out+=marker(shape,X(p.x),Y(p.y),color);
+      if(p.mark)out+='<text x="'+(X(p.x)+7).toFixed(1)+'" y="'+(Y(p.y)-8).toFixed(1)+'" font-size="10" fill="#8E1D1D">'+esc(p.mark)+'</text>';
+      if(p.dotLabel)out+='<text x="'+X(p.x).toFixed(1)+'" y="'+(Y(p.y)-9).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#123B47">'+esc(p.dotLabel)+'</text>';
+    });
+  });
+  out+='<line x1="'+pl+'" y1="'+(H-pb)+'" x2="'+(W-pr)+'" y2="'+(H-pb)+'" stroke="#8FA9B2"/>';
+  (o.xLabels||[]).forEach(function(l){
+    out+='<text x="'+X(l.x).toFixed(1)+'" y="'+(H-pb+17)+'" text-anchor="middle" font-size="11" fill="#4A6B75">'+esc(l.t)+'</text>';
+  });
+  if(o.xTitle)out+='<text x="'+(W/2)+'" y="'+(H-4)+'" text-anchor="middle" font-size="11" fill="#4A6B75">'+esc(o.xTitle)+'</text>';
+  if(o.yTitle)out+='<text x="12" y="'+(H/2)+'" font-size="11" fill="#4A6B75" transform="rotate(-90 12 '+(H/2)+')" text-anchor="middle">'+esc(o.yTitle)+'</text>';
+  out+='</svg>';
+  return out;
+}
+function legend(series){
+  return '<div class="legend">'+series.map(function(s,i){
+    var c=s.color||COLORS[i%COLORS.length],sh=SHAPES[i%SHAPES.length];
+    return '<span><i style="background:'+c+';border-color:'+c+';border-radius:'+(sh==='circle'?'50%':'0')+'"></i>'+esc(s.label)+'</span>';
+  }).join('')+'</div>';
+}
+function sessionSeries(s){
+  return {label:s.date||'本次',points:sortedPoints(s).filter(function(p){return p.glucose!=null&&p.elapsedMin!=null}).map(function(p){return {x:p.elapsedMin,y:p.glucose,mark:markIfLow(p.glucose),dotLabel:(p.glucose==null?'':String(p.glucose))}})};
+}
+function overlaySeries(limit){
+  var ss=S.sessions.filter(function(s){return arr(s,'timeline').some(function(p){return p.glucose!=null&&p.elapsedMin!=null})}).slice(-(limit||5));
+  return ss.map(function(s){return sessionSeries(s)});
+}
+
+/* ---------------- 视图：今天 ---------------- */
+var V={};
+V.today=function(){
+  var h='<h1>今天</h1><p class="lead">'+esc(today())+'　记清楚，比记得多更要紧。</p>';
+  if(storageBroken)h+=banner('danger','!','<p><b>本机浏览器不允许保存。</b>现在写的记录刷新就会丢，请到「数据与设置」里导出 JSON 备份。</p>');
+  if(backupDue())h+=banner('warn','!','<p><b>超过一周没备份了。</b>手机清缓存、换设备都会抹掉本地记录，去「数据与设置」导出一份 JSON 存好。</p>');
+  var gs=allGlucose(),last=gs[gs.length-1],s=activeSession(),e=s?sessionElapsed(s):null;
+  h+='<div class="card soft"><div class="spread"><b style="font-size:17px">血糖监护</b><span class="small">透析当天按分钟记</span></div>';
+  if(s){
+    var rem=remainOf(s,e);
+    h+='<div class="grid3 mt"><div class="stat"><div class="v num" id="clock-elapsed">'+sval(e)+'</div><div class="l">已透析（分钟）</div></div>'+
+       '<div class="stat"><div class="v num" id="clock-remain">'+sval(rem)+'</div><div class="l">剩余（分钟）</div></div>'+
+       '<div class="stat"><div class="v num">'+arr(s,'timeline').length+'</div><div class="l">已记时间点</div></div></div>';
+    h+='<p class="small mb">本次开始于 '+esc(s.start||'—')+'，计划 '+esc(s.plannedMin==null?'未填':s.plannedMin+' 分钟')+'。计时按本机时钟推算，切后台会停，建议用手机闹钟兜底。</p>';
+    h+='<div id="due-banner"></div>';
+    h+='<button type="button" class="btn primary block big" data-act="go" data-view="monitor">继续血糖监护</button>';
+  }else{
+    if(last)h+='<p class="mt">最近一次血糖 <b class="num" style="font-size:24px">'+esc(last.value)+'</b> <span class="small">mmol/L</span>　<span class="small">'+esc(last.stamp)+' · '+esc(last.from)+' · '+esc(last.tag)+'</span></p>';
+    else h+='<p class="mt">还没有血糖记录。透析当天点「进入血糖监护」，按「已透析 X 分钟 / 剩余 Y 分钟」记，才看得出是不是总在同一段掉下来。</p>';
+    h+='<div class="row mt"><button type="button" class="btn primary" data-act="go" data-view="monitor">进入血糖监护</button><button type="button" class="btn ghost" data-act="sheet" data-sheet="daily">记一个血糖（非透析时）</button></div>';
+  }
+  h+='</div>';
+  h+='<div class="btn-row">'+
+     '<button type="button" class="btn big" data-act="sheet" data-sheet="daily">记一笔</button>'+
+     '<button type="button" class="btn big" data-act="go" data-view="monitor">进入血糖监护</button>'+
+     '<button type="button" class="btn big" data-act="print" data-kind="summary">就诊摘要</button>'+
+     '<button type="button" class="btn big" data-act="export-json">备份</button></div>';
+  var todayDaily=S.daily.filter(function(d){return d.date===today()});
+  var medDone=S.medChecks.filter(function(m){return m.date===today()&&m.done}).length;
+  var ev=lastSymptomPoint();
+  h+='<h2>今天记了什么</h2><div class="grid3">'+
+     '<div class="stat"><div class="v num">'+todayDaily.length+'</div><div class="l">今日记录</div></div>'+
+     '<div class="stat"><div class="v num">'+medDone+'/'+S.meds.length+'</div><div class="l">今日用药打卡</div></div>'+
+     '<div class="stat"><div class="v num">'+S.sessions.length+'</div><div class="l">透析会话</div></div></div>';
+  if(ev){
+    h+='<div class="card tight mt"><div class="spread"><b>最近一次有症状的记录</b><span class="tag r">回看</span></div>'+
+       '<p class="small" style="margin:6px 0 0">'+esc(ev.k)+'　'+esc(ev.p.symptom)+'　血糖 '+sval(ev.p.glucose==null?null:ev.p.glucose)+'　第 '+sval(ev.p.elapsedMin)+' 分钟（剩 '+sval(ev.p.remainMin)+' 分钟）</p>'+
+       '<div class="row mt"><button type="button" class="btn tiny" data-act="print" data-kind="monitor" data-id="'+attr(ev.s.id)+'">打印这次监护单</button></div></div>';
+  }
+  h+='<div class="card tight mt"><p class="small" style="margin:0">'+esc(DISCLAIMER)+'</p></div>';
+  return h;
+};
+
+/* ---------------- 视图：记录 ---------------- */
+V.records=function(){
+  var subs=[['daily','每日记录'],['sessions','透析日志'],['labs','化验'],['meds','用药'],['trends','趋势']];
+  var h='<h1>记录</h1><div class="subtabs">'+subs.map(function(x){return '<button type="button" data-act="sub" data-sub="'+x[0]+'" class="'+(UI.sub===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+  var map={daily:recDaily,sessions:recSessions,labs:recLabs,meds:recMeds,trends:recTrends};
+  h+=(map[UI.sub]||recDaily)();
+  return h;
+};
+function recDaily(){
+  var list=S.daily.slice().sort(function(a,b){return (b.date+' '+(b.time||''))<(a.date+' '+(a.time||''))?-1:1}).slice(0,40);
+  var h='<div class="row mb"><button type="button" class="btn primary" data-act="sheet" data-sheet="daily">记一笔</button><button type="button" class="btn ghost" data-act="print" data-kind="week">打印周记录表</button></div>';
+  if(!list.length)return h+empty('还没有记录。体重、血压、血糖、加餐、症状都能记一笔，输入即自动保存。');
+  h+='<ul class="list">'+list.map(function(d){
+    var t=dailyType(d.type);
+    return '<li><div><div class="t">'+esc(d.date)+' '+esc(d.time||'')+(d.tag?' · '+esc(d.tag):'')+'</div>'+
+      '<div class="v num">'+esc(t.label)+'　'+(d.value!=null?esc(d.value):'—')+(t.unit?' <span class="small">'+esc(t.unit)+'</span>':'')+'</div>'+
+      (d.note?'<div class="n">'+esc(d.note)+'</div>':'')+'</div>'+
+      '<div class="row tight"><button type="button" class="btn tiny ghost" data-act="sheet" data-sheet="daily" data-id="'+attr(d.id)+'">改</button>'+
+      '<button type="button" class="btn tiny ghost" data-act="del" data-kind="daily" data-id="'+attr(d.id)+'">删</button></div></li>';
+  }).join('')+'</ul>';
+  return h+'<p class="small">只显示最近 40 条。完整数据在导出的 JSON / CSV 里。</p>';
+}
+function recSessions(){
+  var list=S.sessions.slice().sort(function(a,b){return a.date<b.date?1:-1});
+  var h='<div class="row mb"><button type="button" class="btn primary" data-act="sheet" data-sheet="session">新建透析会话</button><button type="button" class="btn ghost" data-act="go" data-view="monitor">进入血糖监护</button></div>';
+  if(!list.length)return h+empty('还没有透析会话。透析当天从「进入血糖监护」开始，按分钟记最省事。');
+  h+='<ul class="list">'+list.map(function(s){
+    var sym=arr(s,'timeline').filter(function(p){return p.symptom}).length;
+    return '<li><div><div class="t">'+esc(s.date||'未填日期')+' · '+esc(s.shift||'未填班次')+'</div>'+
+      '<div class="v">上机 '+esc(s.start||'—')+' → 下机 '+esc(s.end||'—')+'</div>'+
+      '<div class="n">计划 '+sval(s.plannedMin)+' 分钟 · 时间点 '+arr(s,'timeline').length+' 条'+(sym?' · <span class="tag r">有症状 '+sym+' 条</span>':'')+'</div></div>'+
+      '<div class="row tight" style="flex-direction:column;align-items:stretch">'+
+      '<button type="button" class="btn tiny" data-act="open-session" data-id="'+attr(s.id)+'">进入监护</button>'+
+      '<button type="button" class="btn tiny ghost" data-act="print" data-kind="monitor" data-id="'+attr(s.id)+'">监护单</button>'+
+      '<button type="button" class="btn tiny ghost" data-act="print" data-kind="session" data-id="'+attr(s.id)+'">事件单</button>'+
+      '<button type="button" class="btn tiny ghost" data-act="sheet" data-sheet="session" data-id="'+attr(s.id)+'">编辑</button>'+
+      '<button type="button" class="btn tiny ghost" data-act="del" data-kind="sessions" data-id="'+attr(s.id)+'">删除</button></div></li>';
+  }).join('')+'</ul>';
+  return h;
+}
+function recLabs(){
+  var h='<div class="row mb"><button type="button" class="btn primary" data-act="sheet" data-sheet="lab">新增化验结果</button></div>';
+  h+='<p class="small">常用项目，点一下就带进表单（只是项目名，不含参考值）：</p><div class="chips mb">'+LABNAMES.map(function(n){return '<button type="button" class="chip" data-act="sheet" data-sheet="lab" data-name="'+attr(n)+'">'+esc(n)+'</button>'}).join('')+'</div>';
+  var names={};S.labs.forEach(function(l){names[l.name||'未填项目']=1});
+  var namesList=Object.keys(names);
+  if(namesList.length){
+    if(!UI.labName||namesList.indexOf(UI.labName)<0)UI.labName=namesList[0];
+    var rows=S.labs.filter(function(l){return l.name===UI.labName&&l.value!=null}).sort(function(a,b){return a.date<b.date?-1:1});
+    var series=[{label:UI.labName,points:rows.map(function(r,i){return {x:i,y:num(r.value),dotLabel:String(r.value)}})}];
+    h+='<div class="card"><h3>按项目看变化</h3><div class="field"><label for="lab-select">项目</label><select id="lab-select" data-ui="labName">'+opts(namesList,UI.labName)+'</select></div>';
+    if(rows.length){
+      h+='<div class="chart-box">'+chartSVG(series,{xMax:Math.max(1,rows.length-1),xLabels:rows.map(function(r,i){return {x:i,t:r.date.slice(5)}}),aria:UI.labName+' 趋势'})+'</div>';
+      h+='<div class="table-scroll"><table><tr><th>日期</th><th>数值</th><th>单位</th><th>参考范围</th><th>来源</th></tr>'+rows.map(function(r){return '<tr><td>'+esc(r.date)+'</td><td class="num">'+esc(r.value)+'</td><td>'+esc(r.unit||'')+'</td><td>'+esc(r.range||'')+'</td><td>'+esc(r.source||'')+'</td></tr>'}).join('')+'</table></div>';
+    }else h+=empty('这个项目还没有可画的数值。');
+    h+='<p class="small" style="margin:0">只呈现数值与变化，不解释指标含义、不下结论。</p></div>';
+  }
+  var list=S.labs.slice().sort(function(a,b){return a.date<b.date?1:-1}).slice(0,30);
+  h+='<h3>最近录入</h3>';
+  if(!list.length)return h+empty('还没有化验记录。数值、单位、参考范围照单子抄，含义留给医生解释。');
+  h+='<ul class="list">'+list.map(function(l){
+    return '<li><div><div class="t">'+esc(l.date)+' · '+esc(l.source||'未填来源')+'</div><div class="v">'+esc(l.name||'未填项目')+'　<span class="num">'+sval(l.value)+'</span> <span class="small">'+esc(l.unit||'')+'</span></div>'+
+      (l.range?'<div class="n">参考范围 '+esc(l.range)+'</div>':'')+(l.note?'<div class="n">'+esc(l.note)+'</div>':'')+'</div>'+
+      '<div class="row tight"><button type="button" class="btn tiny ghost" data-act="sheet" data-sheet="lab" data-id="'+attr(l.id)+'">改</button><button type="button" class="btn tiny ghost" data-act="del" data-kind="labs" data-id="'+attr(l.id)+'">删</button></div></li>';
+  }).join('')+'</ul>';
+  return h;
+}
+function recMeds(){
+  var t=today();
+  var h='<div class="row mb"><button type="button" class="btn primary" data-act="sheet" data-sheet="med">新增药品</button></div>';
+  h+=banner('info','i','<p>药单照医生开的单子填，今天吃没吃打个勾就行。工具不生成用药方案、不提醒加减药、不写剂量建议。</p>');
+  if(!S.meds.length)return h+empty('药单还是空的。把医生开的药名、剂量、时间抄进来，透析日打勾更省心。');
+  h+='<h3>今日打卡 · '+esc(t)+'</h3><div class="card">'+S.meds.map(function(m){
+    var c=S.medChecks.filter(function(x){return x.date===t&&x.medId===m.id&&x.done})[0];
+    return '<label class="check"><input type="checkbox" data-act="med-check" data-id="'+attr(m.id)+'"'+(c?' checked':'')+'> <span><b>'+esc(m.name)+'</b>　<span class="small">'+esc(m.dose||'')+' · '+esc(m.time||'')+(m.relation?' · '+esc(m.relation):'')+'</span></span></label>';
+  }).join('')+'</div>';
+  h+='<h3>药单</h3><ul class="list">'+S.meds.map(function(m){
+    return '<li><div><div class="v">'+esc(m.name)+'</div><div class="n">'+esc(m.dose||'')+' · '+esc(m.time||'')+(m.relation?' · '+esc(m.relation):'')+(m.note?' · '+esc(m.note):'')+'</div></div>'+
+      '<div class="row tight"><button type="button" class="btn tiny ghost" data-act="sheet" data-sheet="med" data-id="'+attr(m.id)+'">改</button><button type="button" class="btn tiny ghost" data-act="del" data-kind="meds" data-id="'+attr(m.id)+'">删</button></div></li>';
+  }).join('')+'</ul>';
+  return h;
+}
+function recTrends(){
+  var h='<div class="row mb"><select data-ui="trendType" aria-label="趋势项目" style="max-width:200px">'+opts([{key:'glucose',label:'血糖'},{key:'weight',label:'体重'},{key:'sbp',label:'收缩压'},{key:'dbp',label:'舒张压'},{key:'hr',label:'心率'},{key:'temp',label:'体温'}],UI.trendType)+'</select>'+
+    '<select data-ui="trendDays" aria-label="时间范围" style="max-width:160px">'+opts([{key:'7',label:'近 7 天'},{key:'30',label:'近 30 天'},{key:'90',label:'近 90 天'}],UI.trendDays)+'</select></div>';
+  var from=addDays(today(),-(parseInt(UI.trendDays,10)-1));
+  var rows=S.daily.filter(function(d){return d.type===UI.trendType&&d.value!=null&&d.date>=from}).sort(function(a,b){return a.date<b.date?-1:1});
+  var t=dailyType(UI.trendType);
+  var sDates=S.sessions.map(function(s){return s.date});
+  var series=[{label:t.label+'（'+t.unit+'）',points:rows.map(function(r,i){return {x:i,y:num(r.value),dotLabel:String(r.value)}})}];
+  h+='<div class="card"><h3>'+esc(t.label)+' · 近 '+esc(UI.trendDays)+' 天</h3>';
+  if(rows.length){
+    h+='<div class="chart-box">'+chartSVG(series,{xMax:Math.max(1,rows.length-1),xLabels:rows.filter(function(_,i){return i===0||i===rows.length-1||i%Math.ceil(rows.length/5)===0}).map(function(r){return {x:rows.indexOf(r),t:r.date.slice(5)}}),xTicks:rows.filter(function(r){return sDates.indexOf(r.date)>=0}).map(function(r){return {x:rows.indexOf(r),label:'透析日',color:'#B9D9E1'}}),aria:t.label+'趋势'})+'</div>';
+    h+='<div class="table-scroll"><table><tr><th>日期</th><th>时间</th><th>数值</th><th>场景</th><th>备注</th></tr>'+rows.map(function(r){return '<tr><td>'+esc(r.date)+'</td><td>'+esc(r.time||'')+'</td><td class="num">'+esc(r.value)+'</td><td>'+esc(r.tag||'')+'</td><td>'+esc(r.note||'')+'</td></tr>'}).join('')+'</table></div>';
+  }else h+=empty('这段时间没有这个项目的记录。');
+  h+='<p class="small" style="margin:0">不预测、不拟合、不给风险指数。图下永远附一张能看见的数据表。</p></div>';
+  var ov=overlaySeries(5);
+  h+='<div class="card"><h3>透析进程轴 · 历次血糖叠加</h3><p class="small">横轴是「上机后第几分钟」。看的是：数值下降是不是总落在同一段。</p>';
+  if(ov.length){
+    var xmax=0;ov.forEach(function(s){s.points.forEach(function(p){if(p.x>xmax)xmax=p.x})});
+    var planned=Math.max(xmax,S.sessions.slice(-5).reduce(function(m,s){return Math.max(m,num(s.plannedMin)||0)},0));
+    h+='<div class="chart-box">'+chartSVG(ov,{xMax:planned||xmax||1,xLabels:[0,Math.round((planned||xmax)/2),planned||xmax].map(function(x){return {x:x,t:String(x)}}),xTitle:'已透析分钟',yTitle:'血糖 mmol/L',hline:lowLine(),aria:'历次透析血糖叠加'})+'</div>'+legend(ov);
+    h+='<div class="table-scroll"><table><tr><th>日期</th><th>第几分钟</th><th>血糖</th><th>症状</th><th>加餐</th></tr>'+ov.map(function(se){return se.points.map(function(p){return '<tr><td>'+esc(se.label)+'</td><td>'+esc(p.x)+'</td><td class="num">'+esc(p.y)+'</td><td>'+esc(p.symptom||'')+'</td><td>'+esc(p.meal||'')+'</td></tr>'}).join('')}).join('')+'</table></div>';
+  }else h+=empty('还没有监护会话里的血糖点。透析当天进「血糖监护」记两笔，这里就能叠加。');
+  h+='<p class="small" style="margin:0">'+(lowLine()!=null?'虚线是你在设置里填的下限，只标「低于你设的线」，不做任何判定。':'没填下限，工具不做任何数值判定。')+'</p></div>';
+  return h;
+}
+
+/* ---------------- 视图：排查 ---------------- */
+V.triage=function(){
+  var p=S.profile;
+  var h='<h1>问题排查</h1><p class="lead">不是问诊，是照着做：先把该量的量了、该记的记下，再决定要不要打电话。</p>';
+  h+='<div class="btn-row"><a class="btn danger big" href="'+(p.centerPhone?'tel:'+attr(p.centerPhone):'#')+'" data-act="call-center">拨打透析中心</a>'+
+     '<a class="btn danger big" href="tel:'+attr(p.emergencyPhone||'120')+'">拨打 '+esc(p.emergencyPhone||'120')+'</a></div>';
+  if(!p.centerPhone)h+=banner('warn','!','<p>还没填透析中心电话。<button type="button" class="btn tiny" data-act="go" data-view="data">去设置里填</button></p>');
+  TRIAGE.forEach(function(t){
+    var cls=t.level==='red'?'danger':(t.level==='amber'?'warn':'ok');
+    h+='<div class="banner '+cls+'" style="display:block"><b style="font-size:17px">'+esc(t.title)+'</b><ul style="margin:8px 0 8px;padding-left:20px;font-size:15px">'+t.items.map(function(i){return '<li>'+esc(i)+'</li>'}).join('')+'</ul>'+
+       '<p style="margin:0"><b>怎么做：</b>'+esc(t.steps)+'</p></div>';
+  });
+  h+='<div class="card"><h3>常见情形核对清单</h3><div class="table-scroll"><table><tr><th>症状 / 情形</th><th>先做什么</th><th>什么时候打电话</th></tr>'+
+     CHECKS.map(function(c){return '<tr><td>'+esc(c.sign)+'</td><td>'+esc(c.first)+'</td><td>'+esc(c.call)+'</td></tr>'}).join('')+'</table></div>'+
+     '<p class="small" style="margin:0">所有阈值都不写死成医学常量。没在设置里填「医生给我的目标范围」，工具就只做记录与症状分级，不做数值判定。</p></div>';
+  h+='<div class="card tight"><p class="small" style="margin:0">'+esc(DISCLAIMER)+'</p></div>';
+  return h;
+};
+
+/* ---------------- 视图：知识 ---------------- */
+V.knowledge=function(){
+  var h='<h1>知识</h1><p class="lead">能离线看的常识卡，加医院公开宣教与常用口服药的链接索引。</p>';
+  h+='<div class="field"><label for="search">搜索</label><input id="search" type="text" placeholder="搜常识、编号、链接或备注" value="'+attr(UI.q)+'" autocomplete="off"><span class="help">外链只在你主动点击时打开；工具本身不请求任何外部资源。</span></div>';
+  h+='<div id="knowledge-results"></div>';
+  return h;
+};
+function renderKnowledgeResults(){
+  var box=byId('knowledge-results');if(!box)return;
+  var q=(UI.q||'').trim().toLowerCase();
+  function hit(s){return !q||String(s||'').toLowerCase().indexOf(q)>=0}
+  var h='';
+  var cards=CARDS.filter(function(c){return hit(c.title+' '+c.body+' '+c.ask)});
+  h+='<h2>内置常识卡 <span class="small">（'+cards.length+'）</span></h2>';
+  if(!cards.length)h+=empty('没有匹配的常识卡。');
+  h+=cards.map(function(c){
+    return '<details class="card"><summary>'+esc(c.title)+'</summary><div class="detail-body"><p>'+esc(c.body)+'</p><p><b>可以问医生：</b>'+esc(c.ask)+'</p>'+
+      '<p class="small">具体监测节奏、处置与用药，以透析中心交代为准。</p></div></details>';
+  }).join('');
+  [['tree','宣教'],['drug','药物']].forEach(function(pair){
+    var key=pair[0],list=(LINKS[key]||[]).filter(function(l){return hit((GROUPS[key]||{}).title+' '+l.no+' '+l.url+' '+(S.linkNotes[key+'-'+l.no]||''))});
+    var g=GROUPS[key]||{};
+    h+='<h2>'+esc(g.title||pair[1])+' <span class="small">（'+list.length+' 条）</span></h2>';
+    if(g.hint)h+='<p class="small">'+esc(g.hint)+'</p>';
+    if(!list.length){h+=empty('没有匹配的链接。');return}
+    h+='<ul class="list">'+list.map(function(l){
+      var nk=key+'-'+l.no,note=S.linkNotes[nk]||'';
+      return '<li><div style="min-width:0;flex:1"><div class="t">'+esc(pair[1])+' '+esc(l.no)+'　'+esc(l.host||'')+'</div>'+
+        '<div class="n" style="word-break:break-all">'+esc(l.url)+'</div>'+
+        '<input type="text" data-link-note="'+attr(nk)+'" value="'+attr(note)+'" placeholder="给这条写个备注（例如主题名）" style="min-height:42px;font-size:14px;margin-top:6px"></div>'+
+        '<div class="row tight" style="flex-direction:column;align-items:stretch">'+
+        '<a class="btn tiny" href="'+attr(l.url)+'" target="_blank" rel="noopener noreferrer">打开</a>'+
+        '<button type="button" class="btn tiny ghost" data-act="copy" data-url="'+attr(l.url)+'">复制</button></div></li>';
+    }).join('')+'</ul>';
+  });
+  h+='<h2>来源与兜底</h2><div class="card"><p>'+esc(SOURCE.note||'')+'</p><p>'+esc(SOURCE.openHint||'')+'</p>'+
+     '<p><b>药学部业务电话（海报公开信息，可在设置里改）：</b><span class="num">'+esc(S.profile.pharmacyPhone||SOURCE.pharmacyPhone||'')+'</span></p>'+
+     '<p class="small" style="margin:0">'+esc(SOURCE.pharmacyNote||'')+'</p></div>';
+  h+='<div class="card tight"><p class="small" style="margin:0">'+esc(DISCLAIMER)+'</p></div>';
+  box.innerHTML=h;
+}
+
+/* ---------------- 视图：数据与设置 ---------------- */
+V.data=function(){
+  var p=S.profile,m=p.monitoring,t=p.targets;
+  var h='<h1>数据与设置</h1><p class="lead">所有记录只在本机浏览器里。能导出成文件，才算真的保存住了。</p>';
+  if(backupDue())h+=banner('warn','!','<p><b>超过一周没备份。</b>建议现在导出一份 JSON，存到手机文件里或发给自己。</p>');
+  if(storageBroken)h+=banner('danger','!','<p><b>本机浏览器不允许写入本地存储。</b>请立即导出 JSON，换一个允许存储的浏览器打开。</p>');
+  h+='<h2>备份与打印</h2><div class="btn-row">'+
+     '<button type="button" class="btn primary" data-act="export-json">导出 JSON 完整备份</button>'+
+     '<button type="button" class="btn" data-act="export-csv">导出 CSV</button>'+
+     '<button type="button" class="btn" data-act="import">导入 JSON</button>'+
+     '<button type="button" class="btn" data-act="print" data-kind="week">周记录表</button>'+
+     '<button type="button" class="btn" data-act="print" data-kind="session">透析事件单</button>'+
+     '<button type="button" class="btn" data-act="print" data-kind="summary">就诊摘要</button>'+
+     '<button type="button" class="btn" data-act="print" data-kind="monitor">血糖监护单</button></div>';
+  h+='<input type="file" id="import-file" accept=".json,application/json" hidden>';
+  h+='<p class="small">手机上用「分享 → 打印 / 存储为 PDF」。打印是 A4 黑白也清楚，页脚固定带免责声明。上次备份：'+esc(p.lastBackup||'从未')+'</p>';
+  h+='<h2>患者档案</h2><div class="card">'+
+     fld('姓名 / 称呼','profile.name',p.name,'留空也完全能用；这是给打印页眉用的')+
+     fld('干体重（kg）','profile.dryWeight',p.dryWeight,'照透析中心最新交代填；工具只显示差值，不给脱水量建议','number','0.1')+
+     fld('透析中心','profile.centerName',p.centerName,'')+
+     fld('透析中心电话','profile.centerPhone',p.centerPhone,'排查页的拨号按钮用它')+
+     fld('急救电话','profile.emergencyPhone',p.emergencyPhone,'')+
+     fld('药学部电话','profile.pharmacyPhone',p.pharmacyPhone,'海报上的公开业务电话，可改成自己医院的')+'</div>';
+  h+='<h2>医生给的目标范围</h2>'+banner('info','i','<p>留空 = 工具不做任何数值判定。填了也只标「低于你设的线」，不弹诊断式警告。数值请照透析中心书面交代抄。</p>');
+  h+='<div class="card">'+
+     fld('血糖下限（mmol/L）','profile.targets.glucoseLow',t.glucoseLow,'留空则不判定','number','0.1')+
+     fld('收缩压上限（mmHg）','profile.targets.sbpHigh',t.sbpHigh,'留空则不判定','number','1')+'</div>';
+  h+='<h2>血糖监护配置</h2><div class="card">'+
+     fld('监测间隔（分钟）','profile.monitoring.intervalMin',m.intervalMin,'由透析中心交代后填写；留空则页面不排时点，只手动添加','number','1')+
+     fld('固定加测点（已透析分钟，逗号分隔）','profile.monitoring.extraPoints',arr(m,'extraPoints').join('、'),'例如按医嘱写下的分钟数；留空则不预置')+
+     fld('这些是谁交代的','profile.monitoring.prescribedBy',m.prescribedBy,'写清楚，下次复诊好核对')+
+     '<label class="check"><input type="checkbox" data-model="profile.monitoring.postDialysisCheck"'+(m.postDialysisCheck?' checked':'')+'> <span>透析后也加测一次（只排时点，不给数值）</span></label>'+'</div>';
+  h+='<h2>显示</h2><div class="card"><label class="check"><input type="checkbox" data-model="profile.highContrast"'+(p.highContrast?' checked':'')+'> <span>高对比大字（不动数据，随时可关）</span></label></div>';
+  h+='<h2>待问医生</h2><div class="card"><div class="row"><input type="text" id="q-input" placeholder="例如：透析日降糖药要不要调整？" style="flex:1;min-width:180px"><button type="button" class="btn primary" data-act="add-question">加进清单</button></div>';
+  if(S.questions.length){
+    h+='<ul class="list mt">'+S.questions.map(function(q){
+      return '<li><label class="check" style="flex:1"><input type="checkbox" data-act="question-check" data-id="'+attr(q.id)+'"'+(q.done?' checked':'')+'> <span'+(q.done?' style="text-decoration:line-through;color:var(--ink-3)"':'')+'>'+esc(q.text)+'</span></label>'+
+        '<button type="button" class="btn tiny ghost" data-act="del" data-kind="questions" data-id="'+attr(q.id)+'">删</button></li>';
+    }).join('')+'</ul>';
+  }else h+='<p class="small mt" style="margin-bottom:0">清单是空的。想到什么随手记，复诊时打印在摘要里。</p>';
+  h+='</div>';
+  h+='<h2>演示与清空</h2><div class="card"><p class="small">演示数据会明确标注「演示数据（非真实患者）」，载入前会自动留一份旧快照，随时可恢复。</p>'+
+     '<div class="btn-row"><button type="button" class="btn" data-act="load-demo">载入演示数据</button>'+
+     '<button type="button" class="btn" data-act="restore-snapshot">恢复载入前数据</button>'+
+     '<button type="button" class="btn danger" data-act="clear-all">清空全部记录</button></div></div>';
+  h+='<h2>隐私说明</h2><div class="card"><p class="small">全部数据写在本机 localStorage，没有后端、没有账号、没有云同步、没有统计脚本、不预加载外链。手机清缓存、换设备、微信内置浏览器清数据都可能抹掉记录，<b>每周导出一次 JSON 是硬要求</b>。</p>'+
+     '<p class="small" style="margin:0">'+esc(DISCLAIMER)+'</p></div>';
+  return h;
+};
+function fld(label,model,val,help,type,step){
+  var t=type||'text',v=val==null?'':val;
+  return '<div class="field"><label>'+esc(label)+'</label><input type="'+t+'"'+(t==='number'?' inputmode="decimal" step="'+(step||'1')+'"':'')+' data-model="'+attr(model)+'" value="'+attr(v)+'">'+
+    (help?'<span class="help">'+esc(help)+'</span>':'')+'</div>';
+}
+
+/* ---------------- 视图：血糖监护会话 ---------------- */
+V.monitor=function(){
+  var s=activeSession();
+  if(!s)return monitorStart();
+  return monitorLive(s);
+};
+function monitorStart(){
+  var m=S.profile.monitoring;
+  var h='<div class="row mb"><button type="button" class="btn tiny ghost" data-act="go" data-view="today">← 返回今天</button></div><h1>开始血糖监护</h1><p class="lead">横轴用「已透析 X 分钟 / 剩余 Y 分钟」，不是日历。这样才看得出是不是总在同一段掉下来。</p>';
+  h+=banner('warn','!','<p><b>四条硬规矩：</b>不内置任何血糖阈值、监测间隔或补糖量；提醒只说「该测血糖了」；页面提醒只在工具打开时有效，请同时用手机闹钟；症状出现先告知透析室工作人员，再回来补记。</p>');
+  h+='<div class="card"><form data-form="start-session">'+
+     '<div class="field-inline"><div class="field"><label>日期</label><input type="date" name="date" value="'+attr(today())+'"></div>'+
+     '<div class="field"><label>上机时间</label><input type="time" name="start" value="'+attr(nowTime())+'"></div></div>'+
+     '<div class="field-inline"><div class="field"><label>计划透析时长（分钟）</label><input type="number" inputmode="decimal" name="plannedMin" placeholder="照透析单填，例如 240"><span class="help">只用来算「剩余分钟」，不是医嘱。</span></div>'+
+     '<div class="field"><label>班次 / 备注</label><input type="text" name="shift" placeholder="例如 上午班"></div></div>'+
+     '<p class="small">当前监测配置：间隔 <b>'+esc(m.intervalMin==null?'未填':m.intervalMin+' 分钟')+'</b>；固定加测点 <b>'+esc(arr(m,'extraPoints').length?arr(m,'extraPoints').join('、'):'未填')+'</b>；交代人 <b>'+esc(m.prescribedBy||'未填')+'</b>。<button type="button" class="btn tiny ghost" data-act="go" data-view="data">去设置里改</button></p>'+
+     '<button type="submit" class="btn primary block big">开始本次监护</button></form></div>';
+  h+='<div class="card tight"><p class="small" style="margin:0">'+esc(DISCLAIMER)+'</p></div>';
+  return h;
+}
+function monitorLive(s){
+  var e=sessionElapsed(s),rem=remainOf(s,e),pts=sortedPoints(s),p=S.profile;
+  var h='<div class="row mb"><button type="button" class="btn tiny ghost" data-act="go" data-view="today">← 返回今天</button></div><h1>血糖监护</h1><p class="lead">'+esc(s.date||'')+' · 上机 '+esc(s.start||'—')+' · 计划 '+esc(s.plannedMin==null?'未填':s.plannedMin+' 分钟')+'</p>';
+  h+=banner('danger','!','<p><b>出现症状，先告知透析室工作人员。</b>不要先翻手机查资料。'+(p.centerPhone?'透析中心电话 <b class="num">'+esc(p.centerPhone)+'</b>':'透析中心电话还没填')+'，情况紧急拨打 '+esc(p.emergencyPhone||'120')+'。</p>');
+  h+='<div class="card soft"><div class="grid3">'+
+     '<div class="stat"><div class="v num" id="clock-elapsed">'+sval(e)+'</div><div class="l">已透析（分钟）</div></div>'+
+     '<div class="stat"><div class="v num" id="clock-remain">'+sval(rem)+'</div><div class="l">剩余（分钟）</div></div>'+
+     '<div class="stat"><div class="v num">'+pts.length+'</div><div class="l">已记时间点</div></div></div>'+
+     '<p class="small mt" style="margin-bottom:0">计时按本机时钟推算，切到后台会停，页面提醒只在工具打开时有效；建议用手机自带闹钟兜底。</p></div>';
+  h+='<div id="due-banner"></div>';
+  h+='<div class="btn-row">'+
+     (p.centerPhone?'<a class="btn danger big" href="tel:'+attr(p.centerPhone)+'">告知透析室工作人员</a>':'<button type="button" class="btn danger big" data-act="go" data-view="data">先填透析中心电话</button>')+
+     '<button type="button" class="btn primary big" data-act="sheet" data-sheet="point" data-mode="glucose">记血糖</button>'+
+     '<button type="button" class="btn big" data-act="sheet" data-sheet="point" data-mode="symptom">标症状</button>'+
+     '<button type="button" class="btn big" data-act="sheet" data-sheet="point" data-mode="meal">记加餐</button>'+
+     '<button type="button" class="btn big" data-act="sheet" data-sheet="point" data-mode="bp">记血压</button></div>';
+  h+='<p class="small">每个时间点都可以手动改「已透析分钟」，加测、补记、事后修正都不会丢时刻。</p>';
+  h+='<h2>本次时间点</h2>';
+  if(!pts.length)h+=empty('还没有时间点。先记一次上机血糖，后面按透析中心交代的时点接着记。');
+  else h+='<div class="table-scroll"><table><tr><th>已透析 / 剩余</th><th>时刻</th><th>血糖</th><th>血压</th><th>加餐</th><th>症状</th><th>处置 / 转归</th><th></th></tr>'+
+    pts.map(function(x){
+      return '<tr><td class="num"><b>'+sval(x.elapsedMin)+'</b> / '+sval(x.remainMin)+'</td><td>'+esc(x.time||'')+'</td>'+
+        '<td class="num"><b>'+sval(x.glucose)+'</b>'+(markIfLow(x.glucose)?'<div class="tag r" style="margin-top:3px">'+esc(markIfLow(x.glucose))+'</div>':'')+'</td>'+
+        '<td class="num">'+sval(x.sbp==null?null:x.sbp)+'/'+sval(x.dbp==null?null:x.dbp)+'</td><td>'+esc(x.meal||'')+'</td><td>'+esc(x.symptom||'')+'</td>'+
+        '<td>'+esc(x.action||'')+(x.outcome?' → '+esc(x.outcome):'')+'</td>'+
+        '<td><button type="button" class="btn tiny ghost" data-act="sheet" data-sheet="point" data-id="'+attr(x.id)+'">改</button></td></tr>';
+    }).join('')+'</table></div>';
+  var cur=sessionSeries(s),curMax=0;
+  cur.points.forEach(function(q){if(q.x>curMax)curMax=q.x});
+  var axis=s.plannedMin||curMax||1;
+  h+='<h2>当次曲线</h2><div class="card"><div class="chart-box">'+chartSVG([cur],{xMax:axis,xLabels:[0,Math.round(axis/2),axis].map(function(x){return {x:x,t:String(x)}}),xTitle:'已透析分钟',yTitle:'血糖 mmol/L',hline:lowLine(),aria:'当次血糖曲线'})+'</div>'+
+    (s.plannedMin==null?'<p class="small">没填计划时长，横轴按已记到的时点排；填上之后会同时显示「剩余分钟」。</p>':'')+
+    (lowLine()!=null?'<p class="small">虚线是你在设置里填的下限；低于线的点带文字标注，不弹诊断式警告。</p>':'<p class="small">没填下限，工具不做任何数值判定。</p>')+'</div>';
+  var ov=overlaySeries(5);
+  h+='<h2>历次叠加</h2><div class="card">';
+  if(ov.length){
+    var xmax=0;ov.forEach(function(x){x.points.forEach(function(q){if(q.x>xmax)xmax=q.x})});
+    h+='<div class="chart-box">'+chartSVG(ov,{xMax:Math.max(xmax,s.plannedMin||0,1),xTitle:'已透析分钟',yTitle:'血糖 mmol/L',hline:lowLine(),aria:'历次血糖叠加'})+'</div>'+legend(ov);
+  }else h+=empty('攒够两次监护会话，这里会把曲线叠在同一条进程轴上。');
+  h+='<p class="small" style="margin:0">只描述分布，不推测原因、不预测下一次。</p></div>';
+  h+='<h2>结束与打印</h2><div class="card"><div class="btn-row">'+
+     '<button type="button" class="btn primary" data-act="print" data-kind="monitor" data-id="'+attr(s.id)+'">打印血糖监护单</button>'+
+     '<button type="button" class="btn" data-act="sheet" data-sheet="session" data-id="'+attr(s.id)+'">补填本次透析信息</button>'+
+     '<button type="button" class="btn ghost" data-act="end-session">结束本次监护</button></div>'+
+     '<p class="small" style="margin:0">结束后仍能在「记录 → 透析日志」里改这次会话，也能随时重新进入监护补记。</p></div>';
+  return h;
+}
+function updateClock(){
+  var s=activeSession();if(!s)return;
+  var e=sessionElapsed(s),rem=remainOf(s,e);
+  var a=byId('clock-elapsed'),b=byId('clock-remain');
+  if(a)a.textContent=e==null?'—':e;
+  if(b)b.textContent=rem==null?'—':rem;
+  var box=byId('due-banner');if(!box)return;
+  var due=nextDue(s);
+  if(due!=null&&e!=null&&e>=due){
+    box.innerHTML=banner('warn','!','<p><b>该测血糖了。</b>按你在设置里填的间隔，下一个时点是第 '+esc(due)+' 分钟。这只是页面提醒，不是数值判定，也不代表发生了什么。</p>');
+  }else if(due!=null){
+    box.innerHTML=banner('info','i','<p>下次该测：第 '+esc(due)+' 分钟（约 '+esc(hhmm(s.startEpoch+due*60000))+'）。页面关掉或切后台不会提醒，请用手机闹钟兜底。</p>');
+  }else box.innerHTML=banner('info','i','<p>还没在设置里填监测间隔，页面不排时点。按透析中心交代的时点手动添加即可。</p>');
+}
+
+/* ---------------- 弹层表单 ---------------- */
+var SHEETS={};
+SHEETS.daily=function(id){
+  var d=findById(S.daily,id)||{date:today(),time:nowTime(),type:'glucose',tag:'',value:'',note:''};
+  var t=dailyType(d.type);
+  return {title:id?'修改记录':'记一笔',sub:'输入即自动保存。数值只记，不判定高低。',
+    body:'<div class="field-inline"><div class="field"><label>日期</label><input type="date" name="date" value="'+attr(d.date)+'"></div>'+
+      '<div class="field"><label>时间</label><input type="time" name="time" value="'+attr(d.time)+'"></div></div>'+
+      '<div class="field"><label>项目</label><select name="type" id="daily-type">'+opts(DAILYTYPES.map(function(x){return {key:x.key,label:x.label+(x.unit?'（'+x.unit+'）':'')}}),d.type)+'</select>'+
+      '<span class="help">单位：<b id="daily-unit">'+esc(t.unit||'无')+'</b></span></div>'+
+      '<div class="field"><label>数值 / 内容</label><input type="'+(t.numeric?'number':'text')+'" '+(t.numeric?'inputmode="decimal" step="0.1"':'')+' name="value" value="'+attr(d.value==null?'':d.value)+'" placeholder="'+(t.numeric?'填数字':'写一句话')+'"></div>'+
+      '<div class="field"><label>场景标签</label><select name="tag">'+opts([''].concat(GTAGS),d.tag)+'</select></div>'+
+      '<div class="field"><label>备注</label><textarea name="note" placeholder="可留空">'+esc(d.note||'')+'</textarea></div>',
+    submit:'保存记录',del:{kind:'daily',id:id}};
+};
+SHEETS.point=function(id,mode,extra){
+  var s=activeSession()||(extra&&extra.sid?findById(S.sessions,extra.sid):null)||S.sessions[S.sessions.length-1]||null;
+  if(!s)return {title:'先开始监护',sub:'还没有透析会话。',body:'<p>请先从首页点「进入血糖监护」，开始一次会话后再记时间点。</p>',submit:null};
+  var p=id?findById(arr(s,'timeline'),id):null;
+  var e=sessionElapsed(s)||0,rem=remainOf(s,e);
+  var d=p||{time:nowTime(),elapsedMin:e,remainMin:rem,glucose:'',sbp:'',dbp:'',meal:'',symptom:'',action:'',outcome:'',note:''};
+  var title=id?'修改时间点':({glucose:'记血糖',symptom:'标症状',meal:'记加餐',bp:'记血压'}[mode]||'记一个时间点');
+  var warn=(mode==='symptom')?banner('danger','!','<p><b>先告知透析室工作人员，再回来补记。</b>急症请直接拨号或呼叫现场医护，不要等记录。</p>'):'';
+  var syms=String(d.symptom||'').split(/[、,，]/).filter(Boolean);
+  return {title:title,sub:'自动带上「已透析 X 分钟 / 剩余 Y 分钟」。留空的字段不写进记录。',
+    body:warn+'<div class="field-inline">'+
+      '<div class="field"><label>已透析（分钟）</label><input type="number" inputmode="decimal" name="elapsedMin" value="'+attr(d.elapsedMin==null?'':d.elapsedMin)+'"></div>'+
+      '<div class="field"><label>剩余（分钟）</label><input type="number" inputmode="decimal" name="remainMin" value="'+attr(d.remainMin==null?'':d.remainMin)+'"></div>'+
+      '<div class="field"><label>时刻</label><input type="time" name="time" value="'+attr(d.time||'')+'"></div></div>'+
+      '<div class="field"><label>血糖（mmol/L）</label><input type="number" inputmode="decimal" step="0.1" name="glucose" value="'+attr(d.glucose==null?'':d.glucose)+'" placeholder="没测就留空"></div>'+
+      '<div class="field-inline"><div class="field"><label>收缩压</label><input type="number" inputmode="decimal" name="sbp" value="'+attr(d.sbp==null?'':d.sbp)+'"></div>'+
+      '<div class="field"><label>舒张压</label><input type="number" inputmode="decimal" name="dbp" value="'+attr(d.dbp==null?'':d.dbp)+'"></div></div>'+
+      '<div class="field"><label>加餐 / 进食</label><input type="text" name="meal" value="'+attr(d.meal||'')+'" placeholder="几点吃了什么，可留空"></div>'+
+      '<div class="field"><label>症状（可多选）</label><div class="chips">'+SYMPTOMS.map(function(x){return '<label class="chip'+(syms.indexOf(x)>=0?' on danger':'')+'"><input type="checkbox" name="symptom" value="'+attr(x)+'"'+(syms.indexOf(x)>=0?' checked':'')+' style="position:absolute;opacity:0;width:1px;height:1px"> '+esc(x)+'</label>'}).join('')+'</div>'+
+      '<input type="text" name="symptomOther" value="'+attr(syms.filter(function(x){return SYMPTOMS.indexOf(x)<0}).join('、'))+'" placeholder="其他症状，可留空"></div>'+
+      '<div class="field"><label>处置（照实际写）</label><input type="text" name="action" value="'+attr(d.action||'')+'" placeholder="例如 已告知透析室工作人员"></div>'+
+      '<div class="field"><label>转归</label><input type="text" name="outcome" value="'+attr(d.outcome||'')+'" placeholder="后来怎样，可留空"></div>'+
+      '<div class="field"><label>备注</label><textarea name="note">'+esc(d.note||'')+'</textarea></div>',
+    submit:'保存时间点',sid:s.id,del:{kind:'point',id:id,sid:s.id}};
+};
+SHEETS.lab=function(id,mode,extra){
+  var l=findById(S.labs,id)||{date:today(),name:(extra&&extra.name)||'',value:'',unit:'',range:'',source:'',note:''};
+  return {title:id?'修改化验结果':'新增化验结果',sub:'照单子抄数值、单位、参考范围。工具不解释指标含义。',
+    body:'<div class="field-inline"><div class="field"><label>采样日期</label><input type="date" name="date" value="'+attr(l.date)+'"></div>'+
+      '<div class="field"><label>项目名</label><input type="text" name="name" value="'+attr(l.name||'')+'" placeholder="例如 血小板"></div></div>'+
+      '<div class="field-inline"><div class="field"><label>数值</label><input type="text" inputmode="decimal" name="value" value="'+attr(l.value==null?'':l.value)+'"></div>'+
+      '<div class="field"><label>单位</label><input type="text" name="unit" value="'+attr(l.unit||'')+'"></div></div>'+
+      '<div class="field-inline"><div class="field"><label>参考范围（照抄）</label><input type="text" name="range" value="'+attr(l.range||'')+'"></div>'+
+      '<div class="field"><label>来源机构</label><input type="text" name="source" value="'+attr(l.source||'')+'"></div></div>'+
+      '<div class="field"><label>备注</label><textarea name="note">'+esc(l.note||'')+'</textarea></div>',
+    submit:'保存化验',del:{kind:'labs',id:id}};
+};
+SHEETS.med=function(id){
+  var m=findById(S.meds,id)||{name:'',dose:'',time:'',relation:'',note:''};
+  return {title:id?'修改药品':'新增药品',sub:'照医生开的单子填。工具不生成用药方案、不给剂量建议。',
+    body:'<div class="field"><label>药名</label><input type="text" name="name" value="'+attr(m.name||'')+'"></div>'+
+      '<div class="field-inline"><div class="field"><label>剂量（照抄处方）</label><input type="text" name="dose" value="'+attr(m.dose||'')+'"></div>'+
+      '<div class="field"><label>时间</label><input type="text" name="time" value="'+attr(m.time||'')+'" placeholder="例如 早餐后"></div></div>'+
+      '<div class="field"><label>与透析日的关系</label><input type="text" name="relation" value="'+attr(m.relation||'')+'" placeholder="例如 透析日按医生交代"></div>'+
+      '<div class="field"><label>备注</label><textarea name="note">'+esc(m.note||'')+'</textarea></div>',
+    submit:'保存药品',del:{kind:'meds',id:id}};
+};
+SHEETS.session=function(id){
+  var s=findById(S.sessions,id)||{date:today(),start:'',end:'',shift:'',plannedMin:'',weightBefore:'',weightAfter:'',ultrafiltration:'',dialysateGlucose:'',event:'',action:'',outcome:''};
+  return {title:id?'编辑透析会话':'新建透析会话',sub:'与血糖监护共用一份数据，不用重复录两遍。所有参数照透析单抄。',
+    body:'<div class="field-inline"><div class="field"><label>日期</label><input type="date" name="date" value="'+attr(s.date)+'"></div>'+
+      '<div class="field"><label>班次 / 备注</label><input type="text" name="shift" value="'+attr(s.shift||'')+'"></div></div>'+
+      '<div class="field-inline"><div class="field"><label>上机时间</label><input type="time" name="start" value="'+attr(s.start||'')+'"></div>'+
+      '<div class="field"><label>下机时间</label><input type="time" name="end" value="'+attr(s.end||'')+'"></div>'+
+      '<div class="field"><label>计划时长（分钟）</label><input type="number" inputmode="decimal" name="plannedMin" value="'+attr(s.plannedMin==null?'':s.plannedMin)+'"></div></div>'+
+      '<div class="field-inline"><div class="field"><label>透前体重（kg）</label><input type="number" inputmode="decimal" step="0.1" name="weightBefore" value="'+attr(s.weightBefore==null?'':s.weightBefore)+'"></div>'+
+      '<div class="field"><label>透后体重（kg）</label><input type="number" inputmode="decimal" step="0.1" name="weightAfter" value="'+attr(s.weightAfter==null?'':s.weightAfter)+'"></div></div>'+
+      '<div class="field-inline"><div class="field"><label>超滤量（照抄透析单）</label><input type="text" name="ultrafiltration" value="'+attr(s.ultrafiltration||'')+'"></div>'+
+      '<div class="field"><label>透析液葡萄糖设定</label><input type="text" name="dialysateGlucose" value="'+attr(s.dialysateGlucose||'')+'"></div></div>'+
+      '<div class="field"><label>本次事件</label><textarea name="event">'+esc(s.event||'')+'</textarea></div>'+
+      '<div class="field-inline"><div class="field"><label>处理</label><input type="text" name="action" value="'+attr(s.action||'')+'"></div>'+
+      '<div class="field"><label>转归</label><input type="text" name="outcome" value="'+attr(s.outcome||'')+'"></div></div>',
+    submit:'保存会话',del:{kind:'sessions',id:id}};
+};
+function openSheet(key,id,mode,extra){
+  var cfg=SHEETS[key];if(!cfg)return;
+  var c=cfg(id,mode,extra);
+  UI.sheet={key:key,id:id||'',mode:mode||'',cfg:c};
+  var h='<div class="sheet-panel" role="dialog" aria-modal="true"><h3>'+esc(c.title)+'</h3><p class="sub">'+esc(c.sub||'')+'</p>';
+  if(c.submit){
+    h+='<form id="sheet-form">'+c.body+'<div class="sheet-actions"><button type="button" class="btn ghost" data-act="close-sheet">取消</button><button type="submit" class="btn primary">'+esc(c.submit)+'</button></div></form>';
+    if(c.del&&c.del.id)h+='<button type="button" class="btn tiny ghost block mt" data-act="del" data-kind="'+attr(c.del.kind)+'" data-id="'+attr(c.del.id)+'"'+(c.del.sid?' data-sid="'+attr(c.del.sid)+'"':'')+'>删除这一条</button>';
+  }else h+=c.body+'<div class="sheet-actions"><button type="button" class="btn ghost" data-act="close-sheet">关闭</button></div>';
+  h+='</div>';
+  var sh=byId('sheet');sh.innerHTML=h;sh.hidden=false;
+  var first=sh.querySelector('input:not([type=hidden]),select,textarea');
+  if(first&&key!=='point')first.focus();
+  syncChips(sh);
+}
+function closeSheet(){var sh=byId('sheet');sh.hidden=true;sh.innerHTML='';UI.sheet=null}
+function syncChips(root){
+  Array.prototype.forEach.call(root.querySelectorAll('.chip input[type=checkbox]'),function(i){i.parentElement.classList.toggle('on',i.checked)});
+}
+var SHEET_SAVE={};
+SHEET_SAVE.daily=function(fd,id){
+  var type=fd.get('type')||'note',t=dailyType(type);
+  var o={id:id||uid(),date:fd.get('date')||today(),time:fd.get('time')||nowTime(),type:type,
+    value:t.numeric?num(fd.get('value')):(fd.get('value')||''),unit:t.unit,tag:fd.get('tag')||'',note:fd.get('note')||''};
+  if(id){for(var i=0;i<S.daily.length;i++)if(S.daily[i].id===id)S.daily[i]=o}else S.daily.push(o);
+};
+SHEET_SAVE.point=function(fd,id,cfg){
+  var s=findById(S.sessions,cfg.sid);if(!s){toast('找不到这次透析会话');return}
+  var sym=(fd.getAll('symptom')||[]).slice();
+  var other=(fd.get('symptomOther')||'').trim();
+  if(other)sym.push(other);
+  var e=num(fd.get('elapsedMin')),r=num(fd.get('remainMin'));
+  if(e!=null&&r==null&&s.plannedMin!=null)r=s.plannedMin-e;
+  var o={id:id||uid(),time:fd.get('time')||nowTime(),elapsedMin:e,remainMin:r,
+    glucose:num(fd.get('glucose')),sbp:num(fd.get('sbp')),dbp:num(fd.get('dbp')),
+    meal:(fd.get('meal')||'').trim(),symptom:sym.join('、'),action:(fd.get('action')||'').trim(),
+    outcome:(fd.get('outcome')||'').trim(),note:(fd.get('note')||'').trim()};
+  if(o.glucose==null&&!o.symptom&&!o.meal&&o.sbp==null&&!o.action){toast('至少填一项再保存');return false}
+  if(id){var tl=arr(s,'timeline');for(var j=0;j<tl.length;j++)if(tl[j].id===id)tl[j]=o}else{s.timeline=arr(s,'timeline');s.timeline.push(o)}
+  return true;
+};
+SHEET_SAVE.lab=function(fd,id){
+  var o={id:id||uid(),date:fd.get('date')||today(),name:(fd.get('name')||'').trim(),value:num(fd.get('value')),
+    unit:(fd.get('unit')||'').trim(),range:(fd.get('range')||'').trim(),source:(fd.get('source')||'').trim(),note:(fd.get('note')||'').trim()};
+  if(!o.name){toast('请填项目名');return false}
+  if(id){for(var i=0;i<S.labs.length;i++)if(S.labs[i].id===id)S.labs[i]=o}else S.labs.push(o);return true;
+};
+SHEET_SAVE.med=function(fd,id){
+  var o={id:id||uid(),name:(fd.get('name')||'').trim(),dose:(fd.get('dose')||'').trim(),time:(fd.get('time')||'').trim(),relation:(fd.get('relation')||'').trim(),note:(fd.get('note')||'').trim()};
+  if(!o.name){toast('请填药名');return false}
+  if(id){for(var i=0;i<S.meds.length;i++)if(S.meds[i].id===id)S.meds[i]=o}else S.meds.push(o);return true;
+};
+SHEET_SAVE.session=function(fd,id){
+  var o=findById(S.sessions,id)||{id:id||uid(),timeline:[],startEpoch:null};
+  o.date=fd.get('date')||today();o.shift=(fd.get('shift')||'').trim();o.start=fd.get('start')||'';o.end=fd.get('end')||'';
+  o.plannedMin=num(fd.get('plannedMin'));o.weightBefore=num(fd.get('weightBefore'));o.weightAfter=num(fd.get('weightAfter'));
+  o.ultrafiltration=(fd.get('ultrafiltration')||'').trim();o.dialysateGlucose=(fd.get('dialysateGlucose')||'').trim();
+  o.event=(fd.get('event')||'').trim();o.action=(fd.get('action')||'').trim();o.outcome=(fd.get('outcome')||'').trim();
+  o.startEpoch=o.start?epochOf(o.date,o.start):null;
+  if(!id)S.sessions.push(o);return true;
+};
+
+/* ---------------- 打印 ---------------- */
+function pHead(title,sub){return '<div class="print-head"><h1>'+esc(title)+'</h1><div class="meta">患者：'+esc(S.profile.name||'未填写')+'　透析中心：'+esc(S.profile.centerName||'未填写')+'　电话：'+esc(S.profile.centerPhone||'未填写')+'　生成日期：'+esc(today())+(sub?'　'+esc(sub):'')+'</div></div>'}
+function pFoot(){return '<div class="print-foot">仅供就诊沟通参考，非医疗诊断。出现急症请立即联系透析中心或拨打 120。<br>本页由「透析照护助手」按使用者本机记录生成，不含任何医学判断。</div>'}
+function pTable(head,rows){return '<table><tr>'+head.map(function(x){return '<th>'+esc(x)+'</th>'}).join('')+'</tr>'+rows.map(function(r){return '<tr>'+r.map(function(c){return '<td>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</table>'}
+function buildPrint(kind,id){
+  var h='',s,i;
+  if(kind==='week'){
+    var days=[];for(i=6;i>=0;i--)days.push(addDays(today(),-i));
+    var sessionDates=S.sessions.map(function(x){return x.date});
+    var rows=days.map(function(d){
+      var rec=S.daily.filter(function(x){return x.date===d});
+      function pick(t){var v=rec.filter(function(x){return x.type===t&&x.value!=null}).pop();return v?esc(v.value):'—'}
+      var meals=rec.filter(function(x){return x.type==='meal'||x.type==='symptom'}).map(function(x){return esc(dailyType(x.type).label)+'：'+esc(x.value||'')}).join('；')||'—';
+      var notes=rec.filter(function(x){return x.note}).map(function(x){return esc(x.note)}).join('；')||'—';
+      return [esc(d),sessionDates.indexOf(d)>=0?'透析日':'',pick('weight'),pick('sbp')+'/'+pick('dbp'),pick('glucose'),meals,notes];
+    });
+    h=pHead('周记录表',days[0]+' 至 '+days[6])+'<div class="print-sec"><h2>每日记录</h2>'+pTable(['日期','透析','体重 kg','血压 mmHg','血糖 mmol/L','进食 / 症状','备注'],rows)+'</div>';
+    h+='<div class="print-sec"><h2>这一周的透析会话</h2>'+pTable(['日期','上机','下机','时间点数','有症状'],S.sessions.filter(function(x){return days.indexOf(x.date)>=0}).map(function(x){return [esc(x.date),esc(x.start||'—'),esc(x.end||'—'),String(arr(x,'timeline').length),String(arr(x,'timeline').filter(function(p){return p.symptom}).length)]}))+'</div>';
+  }else if(kind==='session'||kind==='monitor'){
+    s=findById(S.sessions,id)||activeSession()||S.sessions[S.sessions.length-1];
+    if(!s)return pHead(kind==='monitor'?'透析中血糖监护单':'透析事件单')+'<p>还没有透析会话，无法生成。</p>'+pFoot();
+    var pts=sortedPoints(s);
+    var title=kind==='monitor'?'透析中血糖监护单':'透析事件单';
+    h=pHead(title,s.date||'')+'<div class="print-sec"><h2>本次透析</h2><p>上机 '+esc(s.start||'—')+'　下机 '+esc(s.end||'—')+'　计划 '+esc(s.plannedMin==null?'未填':s.plannedMin+' 分钟')+'　透前体重 '+esc(s.weightBefore==null?'—':s.weightBefore)+' kg　透后体重 '+esc(s.weightAfter==null?'—':s.weightAfter)+' kg</p>'+
+      '<p>超滤量（照抄透析单）：'+esc(s.ultrafiltration||'—')+'　透析液葡萄糖设定：'+esc(s.dialysateGlucose||'—')+'</p>'+
+      '<p>监测间隔：'+esc(S.profile.monitoring.intervalMin==null?'未填':S.profile.monitoring.intervalMin+' 分钟')+'　由谁交代：'+esc(S.profile.monitoring.prescribedBy||'未填')+'</p></div>';
+    h+='<div class="print-sec"><h2>按透析进程排的时间轴</h2>'+pTable(['已透析 / 剩余（分）','时刻','血糖 mmol/L','血压','加餐','症状','处置','转归','备注'],pts.map(function(p){
+      return ['<b>'+sval(p.elapsedMin)+'</b> / '+sval(p.remainMin),esc(p.time||''),'<b>'+sval(p.glucose)+'</b>'+(markIfLow(p.glucose)?'<br>低于你设的线':''),sval(p.sbp==null?null:p.sbp)+'/'+sval(p.dbp==null?null:p.dbp),esc(p.meal||''),esc(p.symptom||''),esc(p.action||''),esc(p.outcome||''),esc(p.note||'')];
+    }))+'</div>';
+    if(kind==='monitor'){
+      var cur=sessionSeries(s),ov=overlaySeries(5);
+      h+='<div class="print-sec"><h2>当次曲线与历次同段对比</h2>'+chartSVG(ov.length?ov:[cur],{xMax:s.plannedMin||Math.max(1,cur.points.reduce(function(m,p){return Math.max(m,p.x)},0)),xTitle:'已透析分钟',yTitle:'血糖 mmol/L',hline:lowLine(),width:640,height:210})+legend(ov.length?ov:[cur])+
+        '<p class="print-note">横轴是上机后第几分钟；不同形状代表不同日期。只呈现记录到的点，不推测原因、不预测下一次。</p></div>';
+    }
+    h+='<div class="print-sec"><h2>本次事件与转归</h2><p>事件：'+esc(s.event||'未记录')+'</p><p>处理：'+esc(s.action||'未记录')+'</p><p>转归：'+esc(s.outcome||'未记录')+'</p></div>';
+    h+='<div class="print-sec"><h2>留给医生补记</h2><p>　</p><p>　</p></div>';
+  }else{
+    var from=addDays(today(),-29),rec=S.daily.filter(function(d){return d.date>=from&&d.date<=today()});
+    var ss=S.sessions.filter(function(x){return x.date>=from&&x.date<=today()});
+    var labs=S.labs.filter(function(x){return x.date>=from&&x.date<=today()});
+    var evs=[];ss.forEach(function(x){arr(x,'timeline').forEach(function(p){if(p.symptom)evs.push({d:x.date,p:p})})});
+    h=pHead('就诊摘要',from+' 至 '+today())+'<div class="print-sec"><h2>一、这段时间记了什么</h2><p>透析 '+ss.length+' 次；每日记录 '+rec.length+' 条；血糖记录 '+rec.filter(function(x){return x.type==='glucose'}).length+' 条；化验 '+labs.length+' 项；有症状的时间点 '+evs.length+' 条。</p></div>';
+    h+='<div class="print-sec"><h2>二、有症状的事件（按记录顺序）</h2>'+pTable(['日期','已透析 / 剩余（分）','时刻','血糖','症状','加餐','处置','转归'],evs.map(function(x){return [esc(x.d),sval(x.p.elapsedMin)+' / '+sval(x.p.remainMin),esc(x.p.time||''),sval(x.p.glucose),esc(x.p.symptom||''),esc(x.p.meal||''),esc(x.p.action||''),esc(x.p.outcome||'')]}))+'</div>';
+    var gl=rec.filter(function(x){return x.type==='glucose'&&x.value!=null});
+    h+='<div class="print-sec"><h2>三、数值要点（只列记录到的）</h2><p>血糖共 '+gl.length+' 条；最近一次 '+(gl.length?esc(gl[gl.length-1].date+' '+gl[gl.length-1].time+' '+gl[gl.length-1].value)+' mmol/L':'—')+'。</p>'+
+      '<p>'+(lowLine()!=null?'低于设置里所填下限的记录：'+allGlucose().filter(function(x){return x.value<lowLine()}).length+' 条（仅标注，不做判定）':'未设置血糖下限，工具未做任何数值判定')+'。</p>'+
+      '<p>体重、血压、化验的完整数值见下方表格与附带的导出文件。</p>'+
+      pTable(['日期','项目','数值','单位','场景 / 备注'],rec.slice(-16).map(function(x){var t=dailyType(x.type);return [esc(x.date),esc(t.label),esc(x.value==null?'—':x.value),esc(t.unit),esc((x.tag?x.tag+' ':'')+(x.note||''))]}))+'</div>';
+    h+='<div class="print-sec"><h2>四、化验变化</h2>'+pTable(['日期','项目','数值','单位','参考范围','来源'],labs.map(function(x){return [esc(x.date),esc(x.name||''),esc(x.value==null?'—':x.value),esc(x.unit||''),esc(x.range||''),esc(x.source||'')]}))+'</div>';
+    h+='<div class="print-sec"><h2>五、当前用药（照家属录入的药单）</h2>'+pTable(['药名','剂量','时间','与透析日关系'],S.meds.map(function(x){return [esc(x.name),esc(x.dose||''),esc(x.time||''),esc(x.relation||'')]}))+'</div>';
+    h+='<div class="print-sec"><h2>六、待问医生</h2>'+(S.questions.length?'<ol>'+S.questions.map(function(q){return '<li>'+esc(q.text)+(q.done?'（已问）':'')+'</li>'}).join('')+'</ol>':'<p>清单为空。</p>')+'</div>';
+    h+='<div class="print-sec"><h2>七、医生意见</h2><p>　</p><p>　</p><p>　</p></div>';
+  }
+  return h+pFoot();
+}
+function doPrint(kind,id){
+  var root=byId('print-root');
+  root.innerHTML=buildPrint(kind,id);
+  root.setAttribute('aria-hidden','false');
+  setTimeout(function(){window.print()},80);
+}
+
+/* ---------------- 导入导出与数据操作 ---------------- */
+function download(name,text,mime){
+  try{
+    var blob=new Blob([text],{type:mime||'application/octet-stream'});
+    var url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url)},800);
+    return true;
+  }catch(e){toast('导出失败，请换浏览器重试');return false}
+}
+function exportJSON(){
+  var ok=download('dialysisCare-'+today()+'.json',JSON.stringify(S,null,2),'application/json;charset=utf-8');
+  if(ok){S.profile.lastBackup=today();save(true);toast('已导出 JSON，请存好')}
+}
+function exportCSV(){
+  var rows=[['类别','日期','时间','项目','数值','单位','标签/场景','已透析分钟','剩余分钟','症状','加餐','处置','转归','备注']];
+  S.daily.forEach(function(d){var t=dailyType(d.type);rows.push(['每日记录',d.date,d.time||'',t.label,d.value==null?'':d.value,t.unit,d.tag||'','','','','','','',d.note||''])});
+  S.sessions.forEach(function(s){arr(s,'timeline').forEach(function(p){rows.push(['透析监护',s.date,p.time||'','血糖',p.glucose==null?'':p.glucose,'mmol/L','',p.elapsedMin==null?'':p.elapsedMin,p.remainMin==null?'':p.remainMin,p.symptom||'',p.meal||'',p.action||'',p.outcome||'',p.note||''])});});
+  S.labs.forEach(function(l){rows.push(['化验',l.date,'',l.name||'',l.value==null?'':l.value,l.unit||'',l.range||'','','','','','','',l.note||''])});
+  function cell(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'}
+  download('dialysisCare-'+today()+'.csv','\ufeff'+rows.map(function(r){return r.map(cell).join(',')}).join('\r\n'),'text/csv;charset=utf-8');
+  S.profile.lastBackup=today();save(true);toast('已导出 CSV');
+}
+function importJSON(file){
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var o=JSON.parse(r.result);
+      if(!o||typeof o!=='object'||!('daily' in o||'sessions' in o))throw new Error('格式不对');
+      if(!confirm('导入会覆盖本机现有全部记录。建议先导出一份当前备份。\n\n确定继续吗？'))return;
+      try{localStorage.setItem(KEY+'.beforeImport',JSON.stringify(S))}catch(e){}
+      var merged=defaultState();
+      merged=Object.assign(merged,o);
+      merged.profile=Object.assign(defaultState().profile,o.profile||{});
+      merged.profile.targets=Object.assign(defaultState().profile.targets,(o.profile||{}).targets||{});
+      merged.profile.monitoring=Object.assign(defaultState().profile.monitoring,(o.profile||{}).monitoring||{});
+      ['daily','sessions','labs','meds','medChecks','questions'].forEach(function(k){if(!Array.isArray(merged[k]))merged[k]=[]});
+      if(!merged.linkNotes||typeof merged.linkNotes!=='object')merged.linkNotes={};
+      S=merged;save();render();toast('导入完成');
+    }catch(e){alert('导入失败：这个文件不像是本工具导出的 JSON 备份。\n'+e.message)}
+  };
+  r.readAsText(file,'utf-8');
+}
+function loadDemo(){
+  if(!confirm('载入演示数据会覆盖本机现有全部记录（会先自动留一份快照，可用「恢复载入前数据」还原）。\n\n演示数据全是虚构值，明确标注「演示数据（非真实患者）」。\n\n确定继续吗？'))return;
+  try{localStorage.setItem(KEY+'.beforeDemo',JSON.stringify(S))}catch(e){}
+  var d=defaultState(),t=today(),y=addDays(t,-1);
+  d.profile.name='演示数据（非真实患者）';d.profile.centerName='示例透析中心';d.profile.centerPhone='';
+  d.profile.monitoring.intervalMin=60;d.profile.monitoring.prescribedBy='演示：请替换为透析中心书面交代';
+  var sid=uid();
+  d.sessions=[{id:sid,date:y,start:'08:00',end:'12:00',shift:'演示 · 上午班',plannedMin:240,startEpoch:epochOf(y,'08:00'),
+    weightBefore:60.0,weightAfter:58.4,ultrafiltration:'演示',dialysateGlucose:'演示',event:'演示：透析后期出汗、手抖（示例）',action:'演示：已告知透析室工作人员',outcome:'演示：待补',
+    timeline:[
+      {id:uid(),time:'08:00',elapsedMin:0,remainMin:240,glucose:6.0,sbp:130,dbp:76,meal:'',symptom:'',action:'',outcome:'',note:'演示：上机'},
+      {id:uid(),time:'10:00',elapsedMin:120,remainMin:120,glucose:5.4,sbp:128,dbp:74,meal:'演示：少量加餐',symptom:'',action:'',outcome:'',note:'演示'},
+      {id:uid(),time:'11:20',elapsedMin:200,remainMin:40,glucose:4.2,sbp:120,dbp:70,meal:'',symptom:'演示：出汗、手抖',action:'演示：已告知透析室工作人员',outcome:'',note:'演示'},
+      {id:uid(),time:'12:00',elapsedMin:240,remainMin:0,glucose:5.1,sbp:126,dbp:74,meal:'',symptom:'',action:'',outcome:'',note:'演示：下机'}
+    ]}];
+  d.daily=[{id:uid(),date:t,time:'07:20',type:'weight',value:60.0,unit:'kg',tag:'',note:'演示数据'},
+           {id:uid(),date:t,time:'07:25',type:'glucose',value:6.1,unit:'mmol/L',tag:'空腹',note:'演示数据'},
+           {id:uid(),date:y,time:'21:00',type:'glucose',value:5.8,unit:'mmol/L',tag:'睡前',note:'演示数据'}];
+  d.meds=[{id:uid(),name:'演示药品 A',dose:'按处方',time:'早餐后',relation:'透析日遵医嘱',note:'演示数据'}];
+  d.labs=[{id:uid(),date:y,name:'血小板',value:100,unit:'10^9/L',range:'照单子抄',source:'演示数据',note:'示例值，非真实结果'}];
+  d.questions=[{id:uid(),text:'演示：透析日降糖药要不要调整？',done:false}];
+  d.activeSessionId=null;
+  S=d;save();render();toast('演示数据已载入，随时可清空');
+}
+function restoreSnapshot(){
+  var raw=null;
+  try{raw=localStorage.getItem(KEY+'.beforeDemo')||localStorage.getItem(KEY+'.beforeImport')}catch(e){}
+  if(!raw){toast('没有找到载入前的快照');return}
+  if(!confirm('用载入前的快照覆盖现在的全部记录？'))return;
+  try{localStorage.setItem(KEY,raw);S=load();save();render();toast('已恢复载入前数据')}catch(e){toast('恢复失败')}
+}
+function clearAll(){
+  if(!confirm('这会清空本机全部记录（档案、透析会话、化验、用药、待问清单），无法撤销。\n\n建议先导出 JSON 备份。确定清空吗？'))return;
+  S=defaultState();save();render();toast('已清空');
+}
+function delItem(kind,id,sid){
+  if(!confirm('删除这一条记录？'))return;
+  if(kind==='point'){
+    var s=findById(S.sessions,sid)||activeSession();
+    if(s)s.timeline=arr(s,'timeline').filter(function(p){return p.id!==id});
+  }else{
+    if(!Array.isArray(S[kind]))return;
+    S[kind]=S[kind].filter(function(x){return x.id!==id});
+    if(kind==='sessions'&&S.activeSessionId===id)S.activeSessionId=null;
+  }
+  save();closeSheet();render();
+}
+
+/* ---------------- 渲染与事件 ---------------- */
+function render(){
+  document.body.classList.toggle('hc',!!S.profile.highContrast);
+  byId('tabs').hidden=false; // 监护页也保留底部导航，随时能切到排查与知识
+  Array.prototype.forEach.call(document.querySelectorAll('#tabs [data-view]'),function(b){b.classList.toggle('on',b.dataset.view===UI.view)});
+  var v=byId('view');
+  v.innerHTML=(V[UI.view]||V.today)();
+  byId('print-root').setAttribute('aria-hidden','true');
+  if(UI.view==='knowledge')renderKnowledgeResults();
+  if(UI.view==='monitor'||UI.view==='today')updateClock();
+  window.scrollTo(0,0);
+}
+function modelVal(t){
+  if(t.type==='checkbox')return t.checked;
+  if(t.type==='number'||t.dataset.numeric==='1')return num(t.value);
+  return t.value;
+}
+function copyText(txt){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){toast('已复制链接')},function(){fallbackCopy(txt)});
+  }else fallbackCopy(txt);
+}
+function fallbackCopy(txt){
+  var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');toast('已复制链接')}catch(e){toast('复制失败，请长按链接手动复制')}
+  document.body.removeChild(ta);
+}
+var ACT={
+  go:function(t){UI.view=t.dataset.view;render()},
+  sub:function(t){UI.sub=t.dataset.sub;render()},
+  sheet:function(t){openSheet(t.dataset.sheet,t.dataset.id,t.dataset.mode,{name:t.dataset.name,sid:t.dataset.sid})},
+  'close-sheet':function(){closeSheet()},
+  print:function(t){doPrint(t.dataset.kind,t.dataset.id)},
+  copy:function(t){copyText(t.dataset.url)},
+  del:function(t){delItem(t.dataset.kind,t.dataset.id,t.dataset.sid)},
+  'export-json':function(){exportJSON()},
+  'export-csv':function(){exportCSV()},
+  import:function(){var f=byId('import-file');if(f)f.click()},
+  'load-demo':function(){loadDemo()},
+  'restore-snapshot':function(){restoreSnapshot()},
+  'clear-all':function(){clearAll()},
+  'add-question':function(){
+    var i=byId('q-input');if(!i||!i.value.trim()){toast('先写一句要问的话');return}
+    S.questions.push({id:uid(),text:i.value.trim(),done:false});save();render();
+  },
+  'question-check':function(t){var q=findById(S.questions,t.dataset.id);if(q){q.done=t.checked;save(true)}},
+  'med-check':function(t){
+    var d=today(),id=t.dataset.id;
+    S.medChecks=S.medChecks.filter(function(x){return !(x.date===d&&x.medId===id)});
+    if(t.checked)S.medChecks.push({date:d,medId:id,done:true});
+    save(true);
+  },
+  'open-session':function(t){S.activeSessionId=t.dataset.id;save(true);UI.view='monitor';render()},
+  'end-session':function(){
+    var s=activeSession();if(!s)return;
+    s.end=s.end||nowTime();s.startEpoch=epochOf(s.date,s.start);
+    S.activeSessionId=null;save();UI.view='records';UI.sub='sessions';render();toast('本次监护已结束，记录都留着');
+  },
+  'call-center':function(t){if(!S.profile.centerPhone){t.preventDefault();UI.view='data';render();toast('先在设置里填透析中心电话')}}
+};
+function onClick(e){
+  var chip=e.target.closest?e.target.closest('.chip input[type=checkbox]'):null;
+  if(chip){setTimeout(function(){syncChips(byId('sheet'))},0);return}
+  var t=e.target.closest?e.target.closest('[data-act]'):null;
+  if(!t)return;
+  var fn=ACT[t.dataset.act];
+  if(fn){fn(t,e)}
+  if(e.target.closest('#sheet')&&t.dataset.act==='go'){/* 允许从弹层跳走 */closeSheet()}
+}
+function onInput(e){
+  var t=e.target;
+  if(t.id==='search'){UI.q=t.value;renderKnowledgeResults();return}
+  if(t.dataset&&t.dataset.model){setPath(S,t.dataset.model,modelVal(t));debounceSave()}
+  if(t.id==='daily-type'){
+    var u=byId('daily-unit');if(u){var k=dailyType(t.value);u.textContent=k.unit||'无'}
+    var inp=byId('sheet-form')?byId('sheet-form').querySelector('[name=value]'):null;
+    if(inp){if(k.numeric){inp.type='number';inp.setAttribute('inputmode','decimal');inp.setAttribute('step','0.1')}else{inp.type='text';inp.removeAttribute('inputmode');inp.removeAttribute('step')}}
+  }
+}
+function onChange(e){
+  var t=e.target;
+  if(t.dataset&&t.dataset.model){setPath(S,t.dataset.model,modelVal(t));debounceSave();if(t.type==='checkbox'&&t.dataset.model==='profile.highContrast')render()}
+  if(t.type==='checkbox'&&t.name==='symptom'){syncChips(byId('sheet'))}
+  if(t.dataset&&t.dataset.ui){UI[t.dataset.ui]=(t.dataset.ui==='trendDays')?String(parseInt(t.value,10)||30):t.value;render()}
+  if(t.dataset&&t.dataset.linkNote){S.linkNotes[t.dataset.linkNote]=t.value;save(true)}
+  if(t.id==='import-file'&&t.files&&t.files[0]){importJSON(t.files[0]);t.value=''}
+}
+function onSubmit(e){
+  e.preventDefault();
+  var f=e.target;
+  if(f.dataset.form==='start-session'){
+    var fd=new FormData(f),sid=uid(),d=fd.get('date')||today(),st=fd.get('start')||nowTime();
+    var s={id:sid,date:d,start:st,end:'',shift:(fd.get('shift')||'').trim(),plannedMin:num(fd.get('plannedMin')),
+      startEpoch:epochOf(d,st),weightBefore:null,weightAfter:null,ultrafiltration:'',dialysateGlucose:'',event:'',action:'',outcome:'',timeline:[]};
+    S.sessions.push(s);S.activeSessionId=sid;save();render();toast('监护已开始');return;
+  }
+  if(f.id==='sheet-form'&&UI.sheet){
+    var key=UI.sheet.key,cfg=UI.sheet.cfg,data=new FormData(f);
+    var fn=SHEET_SAVE[key];
+    if(fn){var r=fn(data,UI.sheet.id||'',cfg);if(r===false)return}
+    save();closeSheet();render();toast('已保存');
+  }
+}
+function onKey(e){if(e.key==='Escape'&&!byId('sheet').hidden)closeSheet()}
+
+/* ---------------- 启动 ---------------- */
+S=load();
+document.addEventListener('click',onClick);
+document.addEventListener('input',onInput);
+document.addEventListener('change',onChange);
+document.addEventListener('submit',onSubmit);
+document.addEventListener('keydown',onKey);
+document.addEventListener('click',function(e){if(e.target.id==='sheet')closeSheet()});
+render();
+clockTimer=setInterval(function(){if(UI.view==='monitor'||UI.view==='today')updateClock()},15000);
+window.addEventListener('focus',function(){if(UI.view==='monitor'||UI.view==='today')updateClock()});
+})();

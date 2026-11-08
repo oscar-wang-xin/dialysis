@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0891B2">
+<meta name="description" content="给透析患者和家属用的护理记录工具：透析中血糖监护、每日记录、就诊摘要、A4 打印。数据只存本机。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230891B2'/%3E%3Cpath d='M32 15v34M15 32h34' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>透析照护助手</title>
+<style>/*__CSS__*/</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar" id="topbar">
+    <div class="topbar-in">
+      <button type="button" class="brand" data-act="go" data-view="today">透析照护助手</button>
+      <div class="top-actions">
+        <button type="button" class="btn tiny ghost" data-act="go" data-view="data">数据与设置</button>
+      </div>
+    </div>
+    <p class="boundary">护理记录工具 · 不诊断、不调药、不替代医生 · 急症联系透析中心或 120</p>
+  </header>
+  <main id="view" class="view" role="main" aria-live="off"></main>
+</div>
+
+<nav class="tabs" id="tabs" aria-label="主导航">
+  <button type="button" data-act="go" data-view="today"><span>今天</span></button>
+  <button type="button" data-act="go" data-view="records"><span>记录</span></button>
+  <button type="button" data-act="go" data-view="triage"><span>排查</span></button>
+  <button type="button" data-act="go" data-view="knowledge"><span>知识</span></button>
+</nav>
+
+<div id="sheet" class="sheet" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="print-root" aria-hidden="true"></div>
+
+<script>window.APP_DATA=/*__DATA__*/;</script>
+<script>/*__JS__*/</script>
+</body>
+</html>

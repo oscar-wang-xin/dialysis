@@ -1,0 +1,12 @@
+# 统一换行符，避免 Windows / macOS 协作者的整文件 diff
+* text=auto
+
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.py   text eol=lf
+
+# 构建产物按文本处理，方便在 GitHub 上直接查看 diff
+index.html text eol=lf
