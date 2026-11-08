@@ -13,6 +13,15 @@ var UI = {view:'today',sub:'daily',q:'',labName:'',trendType:'glucose',trendDays
 var S, storageBroken=false, saveTimer=null, toastTimer=null, clockTimer=null;
 
 /* ---------------- 基础工具 ---------------- */
+var ICONS={
+  pulse:'<path d="M2.5 12h3.6l2.4-6 4.6 12 2.5-6h6"/>',
+  pen:'<path d="M4 20h16M6.5 15.5l9-9 3 3-9 9H6.5z"/><path d="M14 8l3 3"/>',
+  doc:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+  archive:'<path d="M3 4h18v4H3zM5 8v12h14V8M10 12h4"/>'
+};
+function icon(k){
+  return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[k]||'')+'</svg>';
+}
 function $(s){return document.querySelector(s)}
 function byId(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -119,7 +128,9 @@ function lowLine(){return num(S.profile.targets.glucoseLow)}
 function markIfLow(g){var l=lowLine();return (l!=null&&g!=null&&g<l)?'低于你设的线':''}
 
 /* ---------------- 图表（手写 SVG） ---------------- */
-var COLORS=['#0891B2','#9A4A0B','#046C4C','#8E1D1D','#123B47','#5D6F7E'];
+var COLORS=['#0E7490','#A24A0B','#047857','#B3261E','#123B47','#5D6F7E'];
+var CHART_DASH=['','8 4','2 4','10 3 2 3','5 3'];
+var CHART_SEQ=0;
 var SHAPES=['circle','square','triangle','diamond','cross'];
 function marker(shape,x,y,color){
   var s=5;
@@ -141,48 +152,59 @@ function chartSVG(series,o){
   if(xmax<=0)xmax=1;
   function X(v){return pl+(Math.max(0,Math.min(xmax,v))/xmax)*(W-pl-pr)}
   function Y(v){return pt+(1-(v-ymin)/(ymax-ymin))*(H-pt-pb)}
+  var gid='chartFill'+(++CHART_SEQ),baseY=(H-pb).toFixed(1);
   var out='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+attr(o.aria||'血糖趋势图')+'">';
-  out+='<rect x="'+pl+'" y="'+pt+'" width="'+(W-pl-pr)+'" height="'+(H-pt-pb)+'" fill="#FBFEFF" stroke="#D5E8ED"/>';
+  out+='<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0891B2" stop-opacity="0.20"/><stop offset="100%" stop-color="#0891B2" stop-opacity="0"/></linearGradient></defs>';
+  out+='<rect x="'+pl+'" y="'+pt+'" width="'+(W-pl-pr)+'" height="'+(H-pt-pb)+'" fill="none" stroke="#E1F0F4"/>';
   for(var i=0;i<=3;i++){
     var gy=ymin+(ymax-ymin)*i/3,py=Y(gy);
-    out+='<line x1="'+pl+'" y1="'+py.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+py.toFixed(1)+'" stroke="#E6F0F3"/>';
-    out+='<text x="'+(pl-6)+'" y="'+(py+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#4A6B75">'+gy.toFixed(1)+'</text>';
+    out+='<line class="chart-grid" x1="'+pl+'" y1="'+py.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+py.toFixed(1)+'" stroke="#E9F3F6" stroke-width="1"/>';
+    out+='<text x="'+(pl-7)+'" y="'+(py+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#41636D">'+gy.toFixed(1)+'</text>';
   }
   (o.xTicks||[]).forEach(function(t){
     var px=X(t.x);
-    out+='<line x1="'+px.toFixed(1)+'" y1="'+pt+'" x2="'+px.toFixed(1)+'" y2="'+(H-pb)+'" stroke="'+(t.color||'#B9D9E1')+'" stroke-dasharray="4 4"/>';
-    if(t.label)out+='<text x="'+(px+3).toFixed(1)+'" y="'+(pt+12)+'" font-size="10" fill="#4A6B75">'+esc(t.label)+'</text>';
+    out+='<line x1="'+px.toFixed(1)+'" y1="'+pt+'" x2="'+px.toFixed(1)+'" y2="'+baseY+'" stroke="'+(t.color||'#C6E2EA')+'" stroke-dasharray="4 4"/>';
+    if(t.label)out+='<text x="'+(px+3).toFixed(1)+'" y="'+(pt+12)+'" font-size="10" fill="#41636D">'+esc(t.label)+'</text>';
   });
   if(o.hline!=null){
-    var hy=Y(o.hline);
-    out+='<line x1="'+pl+'" y1="'+hy.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+hy.toFixed(1)+'" stroke="#B45309" stroke-dasharray="7 5" stroke-width="1.6"/>';
+    var hy=Y(o.hline),hyS=hy.toFixed(1);
+    out+='<line x1="'+pl+'" y1="'+hyS+'" x2="'+(W-pr)+'" y2="'+hyS+'" stroke="#B45309" stroke-dasharray="7 5" stroke-width="1.6"/>';
+    out+='<rect x="'+(W-pr-64)+'" y="'+(hy-17).toFixed(1)+'" width="60" height="14" rx="3" fill="#fff" opacity=".88"/>';
     out+='<text x="'+(W-pr-4)+'" y="'+(hy-5).toFixed(1)+'" text-anchor="end" font-size="11" fill="#B45309">你设的线</text>';
   }
   series.forEach(function(s,si){
     var color=s.color||COLORS[si%COLORS.length],shape=SHAPES[si%SHAPES.length];
     var pts=s.points.filter(function(p){return p.y!=null}).slice().sort(function(a,b){return a.x-b.x});
     if(pts.length>1){
-      out+='<polyline points="'+pts.map(function(p){return X(p.x).toFixed(1)+','+Y(p.y).toFixed(1)}).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2.6" stroke-linejoin="round" stroke-dasharray="'+(si%3===2?'6 4':'')+'"/>';
+      var xy=pts.map(function(p){return X(p.x).toFixed(1)+','+Y(p.y).toFixed(1)});
+      if(series.length===1)out+='<polygon class="chart-area" points="'+X(pts[0].x).toFixed(1)+','+baseY+' '+xy.join(' ')+' '+X(pts[pts.length-1].x).toFixed(1)+','+baseY+'" fill="url(#'+gid+')"/>';
+      out+='<polyline points="'+xy.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="'+CHART_DASH[si%CHART_DASH.length]+'"/>';
     }
     pts.forEach(function(p){
-      out+=marker(shape,X(p.x),Y(p.y),color);
-      if(p.mark)out+='<text x="'+(X(p.x)+7).toFixed(1)+'" y="'+(Y(p.y)-8).toFixed(1)+'" font-size="10" fill="#8E1D1D">'+esc(p.mark)+'</text>';
-      if(p.dotLabel)out+='<text x="'+X(p.x).toFixed(1)+'" y="'+(Y(p.y)-9).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#123B47">'+esc(p.dotLabel)+'</text>';
+      var px=X(p.x),py=Y(p.y);
+      out+='<circle class="chart-glow" cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="8" fill="'+color+'" opacity="0.12"/>';
+      out+=marker(shape,px,py,color);
+      if(p.mark)out+='<text x="'+(px+7).toFixed(1)+'" y="'+(py-8).toFixed(1)+'" font-size="10" fill="#8E1D1D">'+esc(p.mark)+'</text>';
+      if(p.dotLabel)out+='<text x="'+px.toFixed(1)+'" y="'+(py-9).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#123B47">'+esc(p.dotLabel)+'</text>';
     });
+    if(series.length>1&&pts.length){
+      var last=pts[pts.length-1],lx=X(last.x),ly=Y(last.y),anchor=lx>W-110?'end':'start';
+      out+='<text x="'+(anchor==='end'?(W-pr-2):(lx+5)).toFixed(1)+'" y="'+(ly-10).toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" fill="'+color+'">'+esc(String(s.label||'').slice(0,12))+'</text>';
+    }
   });
-  out+='<line x1="'+pl+'" y1="'+(H-pb)+'" x2="'+(W-pr)+'" y2="'+(H-pb)+'" stroke="#8FA9B2"/>';
+  out+='<line x1="'+pl+'" y1="'+baseY+'" x2="'+(W-pr)+'" y2="'+baseY+'" stroke="#8FA9B2" stroke-width="1.2"/>';
   (o.xLabels||[]).forEach(function(l){
-    out+='<text x="'+X(l.x).toFixed(1)+'" y="'+(H-pb+17)+'" text-anchor="middle" font-size="11" fill="#4A6B75">'+esc(l.t)+'</text>';
+    out+='<text x="'+X(l.x).toFixed(1)+'" y="'+(H-pb+17)+'" text-anchor="middle" font-size="11" fill="#41636D">'+esc(l.t)+'</text>';
   });
-  if(o.xTitle)out+='<text x="'+(W/2)+'" y="'+(H-4)+'" text-anchor="middle" font-size="11" fill="#4A6B75">'+esc(o.xTitle)+'</text>';
-  if(o.yTitle)out+='<text x="12" y="'+(H/2)+'" font-size="11" fill="#4A6B75" transform="rotate(-90 12 '+(H/2)+')" text-anchor="middle">'+esc(o.yTitle)+'</text>';
+  if(o.xTitle)out+='<text x="'+(W/2)+'" y="'+(H-4)+'" text-anchor="middle" font-size="11" fill="#41636D">'+esc(o.xTitle)+'</text>';
+  if(o.yTitle)out+='<text x="12" y="'+(H/2)+'" font-size="11" fill="#41636D" transform="rotate(-90 12 '+(H/2)+')" text-anchor="middle">'+esc(o.yTitle)+'</text>';
   out+='</svg>';
   return out;
 }
 function legend(series){
   return '<div class="legend">'+series.map(function(s,i){
     var c=s.color||COLORS[i%COLORS.length],sh=SHAPES[i%SHAPES.length];
-    return '<span><i style="background:'+c+';border-color:'+c+';border-radius:'+(sh==='circle'?'50%':'0')+'"></i>'+esc(s.label)+'</span>';
+    return '<span><i style="background:'+c+'"></i>'+esc(s.label)+'</span>';
   }).join('')+'</div>';
 }
 function sessionSeries(s){
@@ -196,11 +218,11 @@ function overlaySeries(limit){
 /* ---------------- 视图：今天 ---------------- */
 var V={};
 V.today=function(){
-  var h='<h1>今天</h1><p class="lead">'+esc(today())+'　记清楚，比记得多更要紧。</p>';
+  var h='<h1>今天</h1><p class="lead"><span class="date-pill num">'+esc(today())+'</span>记清楚，比记得多更要紧。</p>';
   if(storageBroken)h+=banner('danger','!','<p><b>本机浏览器不允许保存。</b>现在写的记录刷新就会丢，请到「数据与设置」里导出 JSON 备份。</p>');
   if(backupDue())h+=banner('warn','!','<p><b>超过一周没备份了。</b>手机清缓存、换设备都会抹掉本地记录，去「数据与设置」导出一份 JSON 存好。</p>');
   var gs=allGlucose(),last=gs[gs.length-1],s=activeSession(),e=s?sessionElapsed(s):null;
-  h+='<div class="card soft"><div class="spread"><b style="font-size:17px">血糖监护</b><span class="small">透析当天按分钟记</span></div>';
+  h+='<div class="card soft hero"><div class="spread"><b class="hero-title">'+icon('pulse')+'血糖监护</b><span class="small">透析当天按分钟记</span></div>';
   if(s){
     var rem=remainOf(s,e);
     h+='<div class="grid3 mt"><div class="stat"><div class="v num" id="clock-elapsed">'+sval(e)+'</div><div class="l">已透析（分钟）</div></div>'+
@@ -210,16 +232,16 @@ V.today=function(){
     h+='<div id="due-banner"></div>';
     h+='<button type="button" class="btn primary block big" data-act="go" data-view="monitor">继续血糖监护</button>';
   }else{
-    if(last)h+='<p class="mt">最近一次血糖 <b class="num" style="font-size:24px">'+esc(last.value)+'</b> <span class="small">mmol/L</span>　<span class="small">'+esc(last.stamp)+' · '+esc(last.from)+' · '+esc(last.tag)+'</span></p>';
+    if(last)h+='<p class="mt">最近一次血糖 <b class="num hero-value">'+esc(last.value)+'</b> <span class="small">mmol/L</span>　<span class="small">'+esc(last.stamp)+' · '+esc(last.from)+' · '+esc(last.tag)+'</span></p>';
     else h+='<p class="mt">还没有血糖记录。透析当天点「进入血糖监护」，按「已透析 X 分钟 / 剩余 Y 分钟」记，才看得出是不是总在同一段掉下来。</p>';
     h+='<div class="row mt"><button type="button" class="btn primary" data-act="go" data-view="monitor">进入血糖监护</button><button type="button" class="btn ghost" data-act="sheet" data-sheet="daily">记一个血糖（非透析时）</button></div>';
   }
   h+='</div>';
-  h+='<div class="btn-row">'+
-     '<button type="button" class="btn big" data-act="sheet" data-sheet="daily">记一笔</button>'+
-     '<button type="button" class="btn big" data-act="go" data-view="monitor">进入血糖监护</button>'+
-     '<button type="button" class="btn big" data-act="print" data-kind="summary">就诊摘要</button>'+
-     '<button type="button" class="btn big" data-act="export-json">备份</button></div>';
+  h+='<div class="btn-row tiles">'+
+     '<button type="button" class="btn big tile" data-act="sheet" data-sheet="daily">'+icon('pen')+'<span>记一笔</span></button>'+
+     '<button type="button" class="btn primary big tile" data-act="go" data-view="monitor">'+icon('pulse')+'<span>进入血糖监护</span></button>'+
+     '<button type="button" class="btn big tile" data-act="print" data-kind="summary">'+icon('doc')+'<span>就诊摘要</span></button>'+
+     '<button type="button" class="btn big tile" data-act="export-json">'+icon('archive')+'<span>备份</span></button></div>';
   var todayDaily=S.daily.filter(function(d){return d.date===today()});
   var medDone=S.medChecks.filter(function(m){return m.date===today()&&m.done}).length;
   var ev=lastSymptomPoint();
@@ -391,7 +413,7 @@ function renderKnowledgeResults(){
       var nk=key+'-'+l.no,note=S.linkNotes[nk]||'';
       return '<li><div style="min-width:0;flex:1"><div class="t">'+esc(pair[1])+' '+esc(l.no)+'　'+esc(l.host||'')+'</div>'+
         '<div class="n" style="word-break:break-all">'+esc(l.url)+'</div>'+
-        '<input type="text" data-link-note="'+attr(nk)+'" value="'+attr(note)+'" placeholder="给这条写个备注（例如主题名）" style="min-height:42px;font-size:14px;margin-top:6px"></div>'+
+        '<input type="text" data-link-note="'+attr(nk)+'" value="'+attr(note)+'" placeholder="给这条写个备注（例如主题名）" style="min-height:48px;font-size:14px;margin-top:6px"></div>'+
         '<div class="row tight" style="flex-direction:column;align-items:stretch">'+
         '<a class="btn tiny" href="'+attr(l.url)+'" target="_blank" rel="noopener noreferrer">打开</a>'+
         '<button type="button" class="btn tiny ghost" data-act="copy" data-url="'+attr(l.url)+'">复制</button></div></li>';

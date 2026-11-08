@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0891B2">
+<meta name="theme-color" content="#0E7490">
 <meta name="description" content="给透析患者和家属用的护理记录工具：透析中血糖监护、每日记录、就诊摘要、A4 打印。数据只存本机。">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230891B2'/%3E%3Cpath d='M32 15v34M15 32h34' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%2322B8D8'/%3E%3Cstop offset='1' stop-color='%230E7490'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M7 34h10l5-12 9 22 5-10h21' fill='none' stroke='white' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <title>透析照护助手</title>
 <style>/*__CSS__*/</style>
 </head>
@@ -13,7 +13,7 @@
 <div id="app">
   <header class="topbar" id="topbar">
     <div class="topbar-in">
-      <button type="button" class="brand" data-act="go" data-view="today">透析照护助手</button>
+      <button type="button" class="brand" data-act="go" data-view="today"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12h3.6l2.4-6 4.6 12 2.5-6h6"/></svg></span><span class="brand-txt">透析照护助手<small>本机保存 · 不上传</small></span></button>
       <div class="top-actions">
         <button type="button" class="btn tiny ghost" data-act="go" data-view="data">数据与设置</button>
       </div>
@@ -24,10 +24,10 @@
 </div>
 
 <nav class="tabs" id="tabs" aria-label="主导航">
-  <button type="button" data-act="go" data-view="today"><span>今天</span></button>
-  <button type="button" data-act="go" data-view="records"><span>记录</span></button>
-  <button type="button" data-act="go" data-view="triage"><span>排查</span></button>
-  <button type="button" data-act="go" data-view="knowledge"><span>知识</span></button>
+  <button type="button" data-act="go" data-view="today"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3"/></svg><span>今天</span></button>
+  <button type="button" data-act="go" data-view="records"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.1"/><circle cx="4" cy="12" r="1.1"/><circle cx="4" cy="18" r="1.1"/></svg><span>记录</span></button>
+  <button type="button" data-act="go" data-view="triage"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.8l8 3v6.1c0 4.8-3.4 7.9-8 9.1-4.6-1.2-8-4.3-8-9.1V5.8z"/><path d="M12 8.5v7M8.5 12h7"/></svg><span>排查</span></button>
+  <button type="button" data-act="go" data-view="knowledge"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 5.5v15M9 8h7M9 12h5"/></svg><span>知识</span></button>
 </nav>
 
 <div id="sheet" class="sheet" hidden></div>
