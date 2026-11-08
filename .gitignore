@@ -73,5 +73,6 @@ test-results/
 # python tools/build.py 重新生成，别直接改根目录成品。
 
 # ========== 五、应当提交的文件（白名单备忘，非 git 规则） ==========
-# 根目录 6 个 .html  src/*.tpl.html  data/*.json  docs/  tools/  skill/
+# 根目录 6 个 .html  src/*.tpl.html  data/*.json  docs/  tools/
 # README.md  CHANGELOG.md  LICENSE  .gitignore  .gitattributes
+# 配套 Skill 已独立到 xin-dialysis-skill 仓库，不在本仓维护。

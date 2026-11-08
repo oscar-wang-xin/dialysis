@@ -2,6 +2,14 @@
 
 本项目版本号与本地存档格式（`dialysis.v1`）相互独立：前者是发布版本，后者是浏览器里的数据结构。
 
+## v2.2.0 · 2026-11-08
+
+**配套 Skill 拆成独立项目。**
+
+- `skill/` 整目录移出主仓，独立为 [xin-dialysis-skill](https://github.com/oscar-wang-xin/xin-dialysis-skill.git)，Skill 名改为 `xin-dialysis`，绑定独立 GitHub 仓库。避免两处重复维护同一份规矩。
+- 独立仓除原有红线、帮助、四个端到端示例、分级措辞与输出模板外，补入本工具知识页的全部结构化内容：9 张常识卡、三级排查、5 条常见情况速查、导出数据字典，以及 22 + 38 条知识索引（含标题与链接）。
+- 主仓 README / DESIGN / .gitignore 改为指向新仓；HTML 页面、`data/`、`tools/build.py` 零改动。老提交历史里仍可找回原 `skill/`。
+
 ## v2.1.3 · 2026-11-08
 
 **许可证定为 MIT。**
