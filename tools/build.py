@@ -31,7 +31,7 @@ def read(p):
     return p.read_text(encoding='utf-8')
 
 
-def ordered_links(items, row_gap=60):
+def ordered_links(items, row_gap=60, titles=None):
     """按海报坐标聚类成行、行内从左到右编号。药表能还原 1–38 的阅读顺序。"""
     rows = []
     for item in sorted(items, key=lambda o: (o['y'], o['x'])):
@@ -46,6 +46,7 @@ def ordered_links(items, row_gap=60):
             url = item['text']
             out.append({
                 'no': n,
+                'title': (titles[n - 1] if titles and n <= len(titles) else ''),
                 'url': url,
                 'host': urlparse(url).netloc,
                 'x': item['x'],
@@ -84,6 +85,9 @@ def self_check(html, css, js, app):
         problems.append('宣教链接应为 22 条，实际 %d' % len(app['links']['tree']))
     if len(app['cards']) < 6 or len(app['triage']) != 3:
         problems.append('常识卡或分级数据不完整')
+    for key in ('drug', 'tree'):
+        if any(not str(x.get('title', '')).strip() for x in app['links'][key]):
+            problems.append('%s 链接存在缺标题的条目' % key)
 
     # 5. 隐私：全仓库文本不得出现真实患者信息
     hit = []
@@ -114,6 +118,10 @@ def main():
     js = read(SRC / 'app.js')
     qr = json.loads(read(DATA / 'qr-links.json'))
     kn = json.loads(read(DATA / 'knowledge.json'))
+    titles = json.loads(read(DATA / 'link-titles.json'))
+    if len(titles['drug']) != 38 or len(titles['tree']) != 22:
+        print('构建中止：海报标题应为 38 / 22 条')
+        return 1
 
     app = {
         'version': 1,
@@ -129,8 +137,8 @@ def main():
         'glucoseTags': kn['glucoseTags'],
         'disclaimer': kn['disclaimer'],
         'links': {
-            'drug': ordered_links(qr['drug'], 60),
-            'tree': ordered_links(qr['tree'], 60),
+            'drug': ordered_links(qr['drug'], 60, titles['drug']),
+            'tree': ordered_links(qr['tree'], 60, titles['tree']),
         },
     }
 
@@ -155,6 +163,7 @@ def main():
     print('  大小      %.1f KB' % (OUT.stat().st_size / 1024))
     print('  宣教链接  %d 条' % len(app['links']['tree']))
     print('  药物链接  %d 条' % len(app['links']['drug']))
+    print('  标题      %d 条（海报逐块辨认）' % (len(titles['drug']) + len(titles['tree'])))
     print('  常识卡    %d 张' % len(app['cards']))
     print('  自检      外部资源 / 脚本闭合 / 数据完整性 / 隐私关键词  全部通过')
     return 0

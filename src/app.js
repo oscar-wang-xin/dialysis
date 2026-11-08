@@ -222,7 +222,7 @@ V.today=function(){
   if(storageBroken)h+=banner('danger','!','<p><b>本机浏览器不允许保存。</b>现在写的记录刷新就会丢，请到「数据与设置」里导出 JSON 备份。</p>');
   if(backupDue())h+=banner('warn','!','<p><b>超过一周没备份了。</b>手机清缓存、换设备都会抹掉本地记录，去「数据与设置」导出一份 JSON 存好。</p>');
   var gs=allGlucose(),last=gs[gs.length-1],s=activeSession(),e=s?sessionElapsed(s):null;
-  h+='<div class="card soft hero"><div class="spread"><b class="hero-title">'+icon('pulse')+'血糖监护</b><span class="small">透析当天按分钟记</span></div>';
+  h+='<div class="card soft hero"><svg class="hero-wave" viewBox="0 0 320 90" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="hw" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#22B8D8"/><stop offset="1" stop-color="#4F46E5"/></linearGradient></defs><path d="M0 62 L58 62 L74 30 L94 76 L114 50 L138 62 L320 62" fill="none" stroke="url(#hw)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="94" cy="76" r="5" fill="url(#hw)"/></svg><div class="spread"><b class="hero-title">'+icon('pulse')+'血糖监护</b><span class="small">透析当天按分钟记</span></div>';
   if(s){
     var rem=remainOf(s,e);
     h+='<div class="grid3 mt"><div class="stat"><div class="v num" id="clock-elapsed">'+sval(e)+'</div><div class="l">已透析（分钟）</div></div>'+
@@ -237,11 +237,11 @@ V.today=function(){
     h+='<div class="row mt"><button type="button" class="btn primary" data-act="go" data-view="monitor">进入血糖监护</button><button type="button" class="btn ghost" data-act="sheet" data-sheet="daily">记一个血糖（非透析时）</button></div>';
   }
   h+='</div>';
-  h+='<div class="btn-row tiles">'+
-     '<button type="button" class="btn big tile" data-act="sheet" data-sheet="daily">'+icon('pen')+'<span>记一笔</span></button>'+
-     '<button type="button" class="btn primary big tile" data-act="go" data-view="monitor">'+icon('pulse')+'<span>进入血糖监护</span></button>'+
-     '<button type="button" class="btn big tile" data-act="print" data-kind="summary">'+icon('doc')+'<span>就诊摘要</span></button>'+
-     '<button type="button" class="btn big tile" data-act="export-json">'+icon('archive')+'<span>备份</span></button></div>';
+  h+='<h2>快速开始</h2><div class="quick">'+
+     '<button type="button" class="btn" data-act="sheet" data-sheet="daily">'+icon('pen')+'记一笔</button>'+
+     '<button type="button" class="btn primary" data-act="go" data-view="monitor">'+icon('pulse')+'进入血糖监护</button>'+
+     '<button type="button" class="btn" data-act="print" data-kind="summary">'+icon('doc')+'打印就诊摘要</button>'+
+     '<button type="button" class="btn" data-act="export-json">'+icon('archive')+'导出备份</button></div>';
   var todayDaily=S.daily.filter(function(d){return d.date===today()});
   var medDone=S.medChecks.filter(function(m){return m.date===today()&&m.done}).length;
   var ev=lastSymptomPoint();
@@ -387,7 +387,7 @@ V.triage=function(){
 /* ---------------- 视图：知识 ---------------- */
 V.knowledge=function(){
   var h='<h1>知识</h1><p class="lead">能离线看的常识卡，加医院公开宣教与常用口服药的链接索引。</p>';
-  h+='<div class="field"><label for="search">搜索</label><input id="search" type="text" placeholder="搜常识、编号、链接或备注" value="'+attr(UI.q)+'" autocomplete="off"><span class="help">外链只在你主动点击时打开；工具本身不请求任何外部资源。</span></div>';
+  h+='<div class="field"><label for="search">搜索</label><input id="search" type="text" placeholder="搜常识、标题、编号、链接或备注" value="'+attr(UI.q)+'" autocomplete="off"><span class="help">外链只在你主动点击时打开；工具本身不请求任何外部资源。</span></div>';
   h+='<div id="knowledge-results"></div>';
   return h;
 };
@@ -404,16 +404,16 @@ function renderKnowledgeResults(){
       '<p class="small">具体监测节奏、处置与用药，以透析中心交代为准。</p></div></details>';
   }).join('');
   [['tree','宣教'],['drug','药物']].forEach(function(pair){
-    var key=pair[0],list=(LINKS[key]||[]).filter(function(l){return hit((GROUPS[key]||{}).title+' '+l.no+' '+l.url+' '+(S.linkNotes[key+'-'+l.no]||''))});
+    var key=pair[0],list=(LINKS[key]||[]).filter(function(l){return hit((GROUPS[key]||{}).title+' '+l.no+' '+l.title+' '+l.url+' '+(S.linkNotes[key+'-'+l.no]||''))});
     var g=GROUPS[key]||{};
     h+='<h2>'+esc(g.title||pair[1])+' <span class="small">（'+list.length+' 条）</span></h2>';
     if(g.hint)h+='<p class="small">'+esc(g.hint)+'</p>';
     if(!list.length){h+=empty('没有匹配的链接。');return}
     h+='<ul class="list">'+list.map(function(l){
       var nk=key+'-'+l.no,note=S.linkNotes[nk]||'';
-      return '<li><div style="min-width:0;flex:1"><div class="t">'+esc(pair[1])+' '+esc(l.no)+'　'+esc(l.host||'')+'</div>'+
+      return '<li><div style="min-width:0;flex:1"><div class="link-title">'+esc(l.title||(pair[1]+' '+l.no))+'<span class="no">'+esc(pair[1])+' '+esc(l.no)+'</span></div>'+
         '<div class="n" style="word-break:break-all">'+esc(l.url)+'</div>'+
-        '<input type="text" data-link-note="'+attr(nk)+'" value="'+attr(note)+'" placeholder="给这条写个备注（例如主题名）" style="min-height:48px;font-size:14px;margin-top:6px"></div>'+
+        '<input type="text" data-link-note="'+attr(nk)+'" value="'+attr(note)+'" placeholder="给这条写个备注（可选）" style="min-height:48px;font-size:14px;margin-top:6px"></div>'+
         '<div class="row tight" style="flex-direction:column;align-items:stretch">'+
         '<a class="btn tiny" href="'+attr(l.url)+'" target="_blank" rel="noopener noreferrer">打开</a>'+
         '<button type="button" class="btn tiny ghost" data-act="copy" data-url="'+attr(l.url)+'">复制</button></div></li>';
@@ -646,13 +646,14 @@ function openSheet(key,id,mode,extra){
   var cfg=SHEETS[key];if(!cfg)return;
   var c=cfg(id,mode,extra);
   UI.sheet={key:key,id:id||'',mode:mode||'',cfg:c};
-  var h='<div class="sheet-panel" role="dialog" aria-modal="true"><h3>'+esc(c.title)+'</h3><p class="sub">'+esc(c.sub||'')+'</p>';
+  var h='<div class="sheet-panel" role="region"><h3>'+esc(c.title)+'</h3><p class="sub">'+esc(c.sub||'')+'</p>';
   if(c.submit){
     h+='<form id="sheet-form">'+c.body+'<div class="sheet-actions"><button type="button" class="btn ghost" data-act="close-sheet">取消</button><button type="submit" class="btn primary">'+esc(c.submit)+'</button></div></form>';
     if(c.del&&c.del.id)h+='<button type="button" class="btn tiny ghost block mt" data-act="del" data-kind="'+attr(c.del.kind)+'" data-id="'+attr(c.del.id)+'"'+(c.del.sid?' data-sid="'+attr(c.del.sid)+'"':'')+'>删除这一条</button>';
   }else h+=c.body+'<div class="sheet-actions"><button type="button" class="btn ghost" data-act="close-sheet">关闭</button></div>';
   h+='</div>';
   var sh=byId('sheet');sh.innerHTML=h;sh.hidden=false;
+  if(sh.scrollIntoView)sh.scrollIntoView({block:'start'});
   var first=sh.querySelector('input:not([type=hidden]),select,textarea');
   if(first&&key!=='point')first.focus();
   syncChips(sh);
@@ -860,8 +861,10 @@ function delItem(kind,id,sid){
 /* ---------------- 渲染与事件 ---------------- */
 function render(){
   document.body.classList.toggle('hc',!!S.profile.highContrast);
-  byId('tabs').hidden=false; // 监护页也保留底部导航，随时能切到排查与知识
-  Array.prototype.forEach.call(document.querySelectorAll('#tabs [data-view]'),function(b){b.classList.toggle('on',b.dataset.view===UI.view)});
+  Array.prototype.forEach.call(document.querySelectorAll('#nav [data-view]'),function(b){
+    var on=b.dataset.view===UI.view;b.classList.toggle('on',on);
+    if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
   var v=byId('view');
   v.innerHTML=(V[UI.view]||V.today)();
   byId('print-root').setAttribute('aria-hidden','true');
@@ -970,7 +973,6 @@ document.addEventListener('input',onInput);
 document.addEventListener('change',onChange);
 document.addEventListener('submit',onSubmit);
 document.addEventListener('keydown',onKey);
-document.addEventListener('click',function(e){if(e.target.id==='sheet')closeSheet()});
 render();
 clockTimer=setInterval(function(){if(UI.view==='monitor'||UI.view==='today')updateClock()},15000);
 window.addEventListener('focus',function(){if(UI.view==='monitor'||UI.view==='today')updateClock()});

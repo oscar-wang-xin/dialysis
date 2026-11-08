@@ -4,40 +4,52 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0E7490">
-<meta name="description" content="给透析患者和家属用的护理记录工具：透析中血糖监护、每日记录、就诊摘要、A4 打印。数据只存本机。">
+<meta name="description" content="给透析患者和家属用的护理记录网页：透析中血糖监护、每日记录、就诊摘要、A4 打印。数据只存本机。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%2322B8D8'/%3E%3Cstop offset='1' stop-color='%230E7490'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M7 34h10l5-12 9 22 5-10h21' fill='none' stroke='white' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <title>透析照护助手</title>
 <style>/* 透析照护助手 · 设计令牌与组件样式
-   零外部依赖：不引字体、不引图标库、不引 CDN；图标全部为内联 SVG。
-   视觉方向：Minimalism / Swiss Style，安静的青绿、克制的层次、清晰的焦点。
-   无障碍：实心按钮底色统一加深，保证白字对比度 >= 4.5:1（WCAG AA）。 */
+   零外部依赖：不引字体、不引图标库、不引 CDN；图标全部内联 SVG。
+   形态：网页式单页（顶部导航 + 自然分节 + 页内表单），不是手机 App 壳。
+   视觉：浅色现代科技感 —— 渐变光晕、细网格底纹、多层阴影、边缘高光、克制的靛蓝点缀。
+   无障碍：实心按钮白字对比度 >= 4.5:1；48px 触控；高对比模式与打印关闭全部装饰。 */
 :root{
   /* 底色与层次 */
-  --bg:#F2F9FB; --bg-glow:#DFF2F8; --surface:#FFFFFF; --surface-2:#EAF6F9; --surface-3:#DDF0F5;
-  --ink:#123B47; --ink-2:#41636D; --ink-3:#5B7882;
+  --bg:#F3F9FC; --surface:#FFFFFF; --surface-2:#EAF6F9; --surface-3:#DDF0F5;
+  --ink:#103A47; --ink-2:#3F616C; --ink-3:#5B7882;
   /* 语义色：亮色用于描边/图标，实心底用深一档以托住白字 */
   --primary:#0891B2; --primary-solid:#0E7490; --primary-dark:#075E73;
   --primary-soft:#E0F4FA; --primary-faint:#F1FAFD;
   --accent:#059669; --accent-solid:#047857; --accent-soft:#E6F6EF;
-  --warn:#B45309; --warn-soft:#FFF7E7; --warn-line:#EFDCB2; --warn-ink:#7A3C04;
+  --indigo:#4F46E5; --indigo-soft:#EEF0FF;
+  --warn:#B45309; --warn-soft:#FFFAF0; --warn-line:#F0E3C6; --warn-ink:#7A3C04;
   --danger:#C62828; --danger-soft:#FDEDED; --danger-line:#EFAFAF; --danger-ink:#8E1D1D;
   --line:#D7E9EE; --line-2:#B9D9E1;
   /* 形状与深度 */
-  --r-lg:20px; --r:16px; --r-sm:10px;
-  --shadow-sm:0 1px 3px rgba(18,59,71,.05);
-  --shadow:0 4px 18px rgba(18,59,71,.07);
-  --shadow-lg:0 16px 40px rgba(18,59,71,.16);
+  --r-lg:22px; --r:18px; --r-sm:11px;
+  --shadow-sm:0 1px 2px rgba(16,58,71,.05),0 2px 8px rgba(16,58,71,.04);
+  --shadow:0 1px 2px rgba(16,58,71,.07),0 14px 34px -12px rgba(14,116,144,.32);
+  --shadow-lg:0 2px 6px rgba(16,58,71,.09),0 28px 62px -18px rgba(14,116,144,.38);
+  --edge:inset 0 1px 0 rgba(255,255,255,.92);
   --ring:0 0 0 3px rgba(8,145,178,.20);
   --grad:linear-gradient(135deg,#22B8D8 0%,#0E7490 100%);
+  --grad-deep:linear-gradient(135deg,#0E7490 0%,#075E73 100%);
+  --grad-tech:linear-gradient(100deg,#0891B2 0%,#4F46E5 100%);
   --font:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC","Source Han Sans SC",sans-serif;
-  --tab-h:66px;
+  --page-w:980px;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{margin:0;color:var(--ink);font:400 17px/1.7 var(--font);letter-spacing:.01em;touch-action:manipulation;
-  background:radial-gradient(1100px 460px at 50% -180px,var(--bg-glow) 0%,rgba(223,242,248,0) 72%),var(--bg);
-  background-repeat:no-repeat}
+body{margin:0;color:var(--ink);font:400 17px/1.72 var(--font);letter-spacing:.01em;touch-action:manipulation;
+  background-color:var(--bg);
+  background-image:
+    linear-gradient(115deg,rgba(255,255,255,.52) 0%,rgba(255,255,255,0) 36%),
+    radial-gradient(1000px 460px at 10% -10%,rgba(34,184,216,.28),rgba(34,184,216,0) 70%),
+    radial-gradient(820px 420px at 94% 2%,rgba(79,70,229,.18),rgba(79,70,229,0) 72%),
+    repeating-linear-gradient(0deg,rgba(14,116,144,.048) 0 1px,transparent 1px 30px),
+    repeating-linear-gradient(90deg,rgba(14,116,144,.048) 0 1px,transparent 1px 30px),
+    linear-gradient(180deg,#F7FCFE 0%,#EDF6FA 100%);
+  background-attachment:fixed;background-repeat:no-repeat}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 a{color:var(--primary-dark)}
@@ -51,108 +63,126 @@ a{color:var(--primary-dark)}
 .mt{margin-top:14px}
 .mb{margin-bottom:14px}
 
-/* 顶栏 */
-.topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);
-  box-shadow:0 1px 0 rgba(18,59,71,.02);backdrop-filter:blur(8px)}
-.topbar-in{max-width:760px;margin:0 auto;padding:8px 14px 5px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.brand{border:0;background:none;padding:4px 0;font-size:19px;font-weight:800;letter-spacing:.01em;color:var(--ink);
-  min-height:48px;display:inline-flex;align-items:center;gap:10px;line-height:1.25}
-.brand .logo{width:36px;height:36px;border-radius:12px;background:var(--grad);display:grid;place-items:center;
-  box-shadow:0 3px 9px rgba(14,116,144,.24);flex:0 0 auto}
-.brand .logo svg{width:22px;height:22px}
+/* 网页页头：玻璃层 + 底部渐变细线 */
+.topbar{position:relative;z-index:10;background:rgba(255,255,255,.84);border-bottom:1px solid rgba(183,216,226,.75);
+  box-shadow:0 6px 24px -18px rgba(14,116,144,.55);backdrop-filter:blur(14px) saturate(1.25)}
+.topbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+  background:linear-gradient(90deg,rgba(8,145,178,0),#22B8D8 18%,#4F46E5 62%,rgba(79,70,229,0));opacity:.88}
+.topbar-in{max-width:var(--page-w);margin:0 auto;padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{border:0;background:none;padding:4px 0;font-size:21px;font-weight:800;letter-spacing:-.01em;color:var(--ink);
+  min-height:48px;display:inline-flex;align-items:center;gap:12px;line-height:1.25;text-align:left}
+.brand .logo{width:42px;height:42px;border-radius:14px;background:var(--grad);display:grid;place-items:center;
+  box-shadow:0 8px 18px -6px rgba(14,116,144,.55),var(--edge),0 0 0 1px rgba(255,255,255,.55) inset;flex:0 0 auto}
+.brand .logo svg{width:25px;height:25px}
 .brand-txt{text-align:left}
-.brand-txt small{display:block;font-size:14px;font-weight:600;color:var(--ink-3);letter-spacing:.02em;margin-top:1px}
-.top-actions{display:flex;gap:8px}
-.boundary{max-width:760px;margin:0 auto;position:relative;padding:5px 14px 8px 30px;font-size:12.5px;line-height:1.5;
-  color:var(--ink-3);border-top:1px solid var(--line);background:linear-gradient(90deg,var(--primary-faint),rgba(241,250,253,0))}
-.boundary::before{content:"";position:absolute;left:15px;top:12px;width:7px;height:7px;border-radius:50%;
+.brand-txt small{display:block;font-size:13.5px;font-weight:600;color:var(--ink-3);letter-spacing:.02em;margin-top:2px}
+.top-meta{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--ink-2);
+  background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:999px;padding:6px 13px;white-space:nowrap;
+  box-shadow:var(--shadow-sm)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+
+/* 顶部导航：网页锚点式，选中用下划线 + 淡底 */
+.nav{max-width:var(--page-w);margin:0 auto;padding:0 12px;display:flex;flex-wrap:wrap;gap:2px}
+.nav button{min-height:50px;padding:10px 17px;border:0;border-bottom:2px solid transparent;border-radius:12px 12px 0 0;
+  background:none;color:var(--ink-2);font-size:15.5px;font-weight:700;transition:background .18s ease,color .18s ease,border-color .18s ease}
+.nav button:hover{background:var(--primary-faint);color:var(--primary-dark)}
+.nav button.on{color:var(--primary-dark);border-bottom-color:var(--primary);
+  background:linear-gradient(180deg,rgba(8,145,178,0),rgba(8,145,178,.11))}
+.nav button:focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
+.boundary{max-width:var(--page-w);margin:0 auto;position:relative;padding:9px 20px 11px 34px;font-size:13px;line-height:1.55;
+  color:var(--ink-3);border-top:1px solid rgba(215,233,238,.8)}
+.boundary::before{content:"";position:absolute;left:20px;top:16px;width:7px;height:7px;border-radius:50%;
   background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 
-/* 主区 */
-.view{max-width:760px;margin:0 auto;padding:18px 14px calc(var(--tab-h) + 40px + env(safe-area-inset-bottom,0px))}
-h1{font-size:27px;line-height:1.3;margin:0 0 5px;letter-spacing:-.01em}
-h2{font-size:20px;line-height:1.35;margin:24px 0 11px}
-h2::before{content:"";display:inline-block;width:4px;height:17px;border-radius:3px;background:var(--grad);
-  margin-right:9px;vertical-align:-2px}
+/* 主区：宽屏舒展、窄屏单列 */
+.view{max-width:var(--page-w);margin:0 auto;padding:26px 20px 46px}
+h1{font-size:31px;line-height:1.28;margin:0 0 6px;letter-spacing:-.025em;font-weight:800}
+h2{font-size:21px;line-height:1.35;margin:28px 0 12px;letter-spacing:-.015em;font-weight:800}
+h2::before{content:"";display:inline-block;width:5px;height:19px;border-radius:4px;background:var(--grad-tech);
+  box-shadow:0 2px 7px rgba(79,70,229,.28);margin-right:10px;vertical-align:-3px}
 h3{font-size:17px;margin:16px 0 8px}
 p{margin:0 0 12px}
-.lead{font-size:15.5px;color:var(--ink-2);margin:0 0 16px}
-.date-pill{display:inline-block;padding:3px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--line-2);
-  color:var(--primary-dark);font-size:14px;font-weight:700;box-shadow:var(--shadow-sm);margin-right:7px;vertical-align:2px}
+.lead{font-size:15.5px;color:var(--ink-2);margin:0 0 18px}
+.date-pill{display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,.9);border:1px solid var(--line-2);
+  color:var(--primary-dark);font-size:14px;font-weight:700;box-shadow:var(--shadow-sm);margin-right:8px;vertical-align:2px}
 hr{border:0;border-top:1px solid var(--line);margin:22px 0}
 
-/* 卡片 */
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 17px;
-  box-shadow:var(--shadow);margin:0 0 14px;transition:box-shadow .2s ease,border-color .2s ease}
-.card.tight{padding:12px 14px}
+/* 卡片：多层阴影 + 内高光，悬浮轻微抬起 */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 19px;
+  box-shadow:var(--shadow),var(--edge);margin:0 0 16px;transition:box-shadow .22s ease,border-color .22s ease,transform .22s ease}
+.card:hover{box-shadow:var(--shadow-lg),var(--edge);border-color:var(--line-2)}
+.card.tight{padding:13px 15px}
 .card.soft{background:var(--primary-faint);border-color:var(--line-2)}
 .card h3{margin-top:0}
 .card p:last-child{margin-bottom:0}
-.card.hero{position:relative;overflow:hidden;padding:18px 18px 18px 22px;
-  background:linear-gradient(155deg,var(--primary-faint) 0%,#FFFFFF 68%);border-color:var(--line-2);box-shadow:var(--shadow)}
-.card.hero::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--grad)}
-.card.hero::after{content:"";position:absolute;right:-58px;top:-64px;width:178px;height:178px;border-radius:50%;
-  background:radial-gradient(circle,rgba(34,184,216,.13),rgba(34,184,216,0) 70%);pointer-events:none}
+.card.hero{position:relative;overflow:hidden;padding:22px 22px 22px 26px;
+  background:
+    repeating-linear-gradient(90deg,rgba(8,145,178,.045) 0 1px,transparent 1px 26px),
+    linear-gradient(120deg,#E9F8FC 0%,#FFFFFF 52%,#F2F3FF 100%);
+  border-color:var(--line-2);box-shadow:var(--shadow-lg),var(--edge)}
+.card.hero > svg.hero-wave{position:absolute;right:10px;top:12px;width:min(300px,48%);height:78px;
+  opacity:.26;z-index:0;pointer-events:none}
+.card.hero::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--grad-tech)}
+.card.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:230px;height:230px;border-radius:50%;
+  background:radial-gradient(circle,rgba(79,70,229,.15),rgba(79,70,229,0) 68%);pointer-events:none}
 .card.hero > *{position:relative;z-index:1}
-.hero-title{display:inline-flex;align-items:center;gap:9px;font-size:19px;color:var(--primary-dark)}
-.hero-title .ico{width:21px;height:21px;padding:4px;border-radius:9px;background:var(--primary-soft);
+.hero-title{display:inline-flex;align-items:center;gap:10px;font-size:20px;color:var(--primary-dark)}
+.hero-title .ico{width:22px;height:22px;padding:5px;border-radius:10px;background:var(--primary-soft);
   color:var(--primary);box-sizing:content-box}
-.hero-value{font-size:32px;font-weight:800;color:var(--primary-dark);letter-spacing:-.02em}
-.grid2{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-.grid3{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.hero-value{font-size:34px;font-weight:800;color:var(--primary-dark);letter-spacing:-.02em}
+.grid2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.grid3{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .row.tight{gap:8px}
 .spread{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 
-/* 按钮：最小 48px 触控；实心底统一用达标深色 */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:48px;padding:10px 16px;
-  border:1px solid var(--line-2);border-radius:12px;background:var(--surface);color:var(--ink);
-  font-size:16px;font-weight:700;text-decoration:none;line-height:1.3;box-shadow:var(--shadow-sm);
+/* 按钮：最小 48px 触控；主按钮深色渐变保证白字达标 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 17px;
+  border:1px solid var(--line-2);border-radius:13px;background:linear-gradient(180deg,#FFFFFF,#F8FCFD);color:var(--ink);
+  font-size:16px;font-weight:700;text-decoration:none;line-height:1.3;
+  box-shadow:var(--shadow-sm),var(--edge);
   transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease}
-.btn:hover{background:var(--surface-2);border-color:var(--primary);box-shadow:var(--shadow);transform:translateY(-1px)}
+.btn:hover{background:#F1FAFD;border-color:var(--primary);box-shadow:var(--shadow);transform:translateY(-2px)}
 .btn:active{transform:translateY(1px);box-shadow:var(--shadow-sm)}
 .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{
   outline:3px solid var(--primary);outline-offset:2px}
-.btn.primary{background:var(--primary-solid);border-color:var(--primary-solid);color:#fff;
-  box-shadow:0 4px 12px rgba(14,116,144,.22)}
-.btn.primary:hover{background:var(--primary-dark);border-color:var(--primary-dark)}
-.btn.accent{background:var(--accent-solid);border-color:var(--accent-solid);color:#fff;
-  box-shadow:0 4px 12px rgba(4,120,87,.20)}
-.btn.accent:hover{background:#036849;border-color:#036849}
-.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff;
-  box-shadow:0 4px 12px rgba(198,40,40,.20)}
-.btn.danger:hover{background:#9E1F1F;border-color:#9E1F1F}
+.btn.primary{background:var(--grad-deep);border-color:var(--primary-dark);color:#fff;
+  box-shadow:0 8px 20px -8px rgba(14,116,144,.70),inset 0 1px 0 rgba(255,255,255,.22)}
+.btn.primary:hover{background:linear-gradient(135deg,#075E73,#064D5E);border-color:#064D5E}
+.btn.accent{background:linear-gradient(135deg,#047857,#036849);border-color:#036849;color:#fff;
+  box-shadow:0 8px 20px -8px rgba(4,120,87,.62),inset 0 1px 0 rgba(255,255,255,.20)}
+.btn.danger{background:linear-gradient(135deg,#C62828,#9E1F1F);border-color:#9E1F1F;color:#fff;
+  box-shadow:0 8px 20px -8px rgba(198,40,40,.60),inset 0 1px 0 rgba(255,255,255,.20)}
 .btn.ghost{background:transparent;box-shadow:none}
 .btn.warn{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn-ink)}
-.btn.tiny{min-height:48px;padding:8px 12px;font-size:14px;font-weight:600}
+.btn.tiny{min-height:48px;padding:8px 13px;font-size:14px;font-weight:600}
 .btn.block{width:100%}
 .btn.big{min-height:58px;font-size:17px}
 .btn[disabled]{opacity:.5;pointer-events:none}
-.btn-row{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:12px 0}
-.btn-row.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-.btn.big.tile{flex-direction:column;gap:7px;min-height:86px;padding:12px 8px}
-.btn.big.tile .ico{width:23px;height:23px}
-.btn.big.tile span{font-size:15.5px;line-height:1.3}
-.btn.big.tile.primary .ico{opacity:.95}
+.btn-row{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin:12px 0}
+.quick{display:grid;gap:11px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin:12px 0 4px}
+.quick .btn{width:100%}
 
-/* 状态条：左侧色条 + 圆形徽章，颜色不单独表意，文案始终说明 */
+/* 状态条：左侧色条 + 圆形徽章，颜色不单独表意 */
 .banner{position:relative;overflow:hidden;display:flex;gap:10px;align-items:flex-start;border-radius:var(--r-sm);
-  padding:11px 14px;margin:0 0 14px;font-size:15.5px;border:1px solid;line-height:1.55;box-shadow:var(--shadow-sm)}
-.banner::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:currentColor;opacity:.5}
+  padding:12px 15px;margin:0 0 15px;font-size:15.5px;border:1px solid;line-height:1.55;box-shadow:var(--shadow-sm),var(--edge)}
+.banner::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:currentColor;opacity:.4}
 .banner .mark{flex:0 0 auto;display:inline-grid;place-items:center;width:23px;height:23px;border-radius:50%;
   background:#fff;box-shadow:0 1px 4px rgba(18,59,71,.14);font-size:14px;font-weight:800;line-height:1}
 .banner.info{background:var(--primary-soft);border-color:var(--line-2);color:var(--primary-dark)}
-.banner.warn{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn-ink)}
+.banner.warn{background:linear-gradient(90deg,#FFFCF6,#FFFFFF);border-color:#F3E8D0;color:var(--warn-ink)}
 .banner.danger{background:var(--danger-soft);border-color:var(--danger-line);color:var(--danger-ink)}
 .banner.ok{background:var(--accent-soft);border-color:#BFE7D5;color:#046C4C}
 .banner p{margin:0}
 
 /* 数字块 */
-.stat{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:14px 14px 12px;box-shadow:var(--shadow-sm)}
-.stat::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--grad);opacity:.72}
-.stat .v{font-size:29px;font-weight:800;line-height:1.2;color:var(--primary-dark);letter-spacing:-.02em}
+.stat{position:relative;overflow:hidden;background:linear-gradient(180deg,#FFFFFF,#F9FDFE);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:15px 15px 13px;box-shadow:var(--shadow-sm),var(--edge)}
+.stat::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--grad-tech);opacity:.85}
+.stat .v{font-size:30px;font-weight:800;line-height:1.2;color:var(--primary-dark);letter-spacing:-.02em}
 .stat .v.dark{color:var(--ink)}
+.stat::after{content:"";position:absolute;right:-30px;top:-34px;width:96px;height:96px;border-radius:50%;
+  background:radial-gradient(circle,rgba(79,70,229,.10),rgba(79,70,229,0) 70%);pointer-events:none}
 .stat .l{font-size:13.5px;color:var(--ink-2);margin-top:4px}
 .kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:15.5px}
 .kv:last-child{border-bottom:0}
@@ -164,7 +194,9 @@ hr{border:0;border-top:1px solid var(--line);margin:22px 0}
 .field .help{font-size:13px;color:var(--ink-3);line-height:1.5}
 input[type=text],input[type=number],input[type=date],input[type=time],input[type=tel],select,textarea{
   width:100%;min-height:50px;padding:10px 13px;border:1px solid var(--line-2);border-radius:var(--r-sm);
-  background:var(--surface);font-size:17px;line-height:1.4;transition:border-color .18s ease,box-shadow .18s ease}
+  background:linear-gradient(180deg,#FFFFFF,#FCFEFE);font-size:17px;line-height:1.4;
+  box-shadow:inset 0 1px 2px rgba(16,58,71,.04);
+  transition:border-color .18s ease,box-shadow .18s ease}
 textarea{min-height:76px;resize:vertical}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:var(--ring)}
 input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--primary);outline-offset:2px;box-shadow:var(--ring)}
@@ -174,25 +206,28 @@ input[inputmode=decimal]{font-variant-numeric:tabular-nums}
 .check input[type=checkbox]{width:26px;height:26px;min-height:0;flex:0 0 auto;accent-color:var(--primary-solid)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}
 .chip{display:inline-flex;align-items:center;min-height:48px;padding:6px 13px;border:1px solid var(--line-2);
-  border-radius:999px;background:var(--surface);font-size:15px;font-weight:600;box-shadow:var(--shadow-sm);
+  border-radius:999px;background:#fff;font-size:15px;font-weight:600;box-shadow:var(--shadow-sm);
   transition:background .18s ease,border-color .18s ease,transform .18s ease}
 .chip:hover{border-color:var(--primary);transform:translateY(-1px)}
 .chip.on{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-dark)}
 .chip.danger.on{background:var(--danger-soft);border-color:var(--danger);color:var(--danger-ink)}
 .subtabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;margin:0 0 4px;-webkit-overflow-scrolling:touch}
 .subtabs button{flex:0 0 auto;min-height:48px;padding:6px 15px;border:1px solid var(--line-2);border-radius:999px;
-  background:var(--surface);font-size:15px;font-weight:600;box-shadow:var(--shadow-sm);transition:background .18s ease}
-.subtabs button.on{background:var(--primary-solid);border-color:var(--primary-solid);color:#fff;box-shadow:0 3px 9px rgba(14,116,144,.20)}
+  background:#fff;font-size:15px;font-weight:600;box-shadow:var(--shadow-sm);transition:background .18s ease}
+.subtabs button.on{background:var(--primary-solid);border-color:var(--primary-solid);color:#fff;box-shadow:0 4px 10px rgba(14,116,144,.24)}
 
-/* 列表 */
+/* 列表与链接条目 */
 .list{list-style:none;padding:0;margin:0}
-.list li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:0 0 9px;
-  display:flex;justify-content:space-between;align-items:flex-start;gap:10px;box-shadow:var(--shadow-sm)}
+.list li{background:linear-gradient(180deg,#FFFFFF,#FBFDFE);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 0 10px;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:10px;box-shadow:var(--shadow-sm),var(--edge)}
 .list li .t{font-size:14px;color:var(--ink-3)}
 .list li .v{font-size:18px;font-weight:700}
 .list li .n{font-size:14.5px;color:var(--ink-2);margin-top:2px}
 .list input[type=text]{min-height:48px}
-.empty{position:relative;padding:56px 16px 24px;text-align:center;color:var(--ink-3);background:var(--surface);
+.link-title{font-size:17px;font-weight:800;line-height:1.45;color:var(--ink);margin-bottom:3px}
+.link-title .no{display:inline-block;font-size:12.5px;font-weight:700;color:var(--primary-dark);
+  background:var(--primary-soft);border-radius:6px;padding:1px 7px;margin-left:7px;vertical-align:2px}
+.empty{position:relative;padding:56px 16px 24px;text-align:center;color:var(--ink-3);background:#fff;
   border:1px dashed var(--line-2);border-radius:var(--r);font-size:15.5px}
 .empty::before{content:"";position:absolute;top:18px;left:50%;transform:translateX(-50%);width:28px;height:28px;
   border:2px dashed var(--line-2);border-radius:50%}
@@ -205,12 +240,12 @@ input[inputmode=decimal]{font-variant-numeric:tabular-nums}
 .tag.r{background:var(--danger-soft);color:var(--danger)}
 
 /* 表格 */
-table{width:100%;border-collapse:collapse;font-size:14.5px;background:var(--surface);margin:10px 0 14px}
+table{width:100%;border-collapse:collapse;font-size:14.5px;background:#fff;margin:10px 0 14px}
 th,td{border:1px solid var(--line);padding:8px 9px;text-align:left;vertical-align:top}
 th{background:var(--surface-2);font-weight:700;font-size:13.5px;color:var(--ink)}
 td{color:var(--ink-2)}
 .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);
-  border-radius:12px;box-shadow:var(--shadow-sm);margin:0 0 14px}
+  border-radius:14px;box-shadow:var(--shadow-sm);margin:0 0 14px}
 .table-scroll table{margin:0;min-width:520px;border:0}
 .table-scroll tr:first-child th{border-top:0}
 .table-scroll th:first-child,.table-scroll td:first-child{border-left:0}
@@ -219,77 +254,80 @@ td{color:var(--ink-2)}
 .table-scroll tbody tr:nth-child(even) td{background:#FBFEFF}
 
 /* 图表 */
-.chart-box{background:linear-gradient(180deg,#FFFFFF 0%,#FAFDFE 100%);border:1px solid var(--line);
-  border-radius:var(--r);padding:12px 10px 8px;margin:0 0 12px;overflow-x:auto;box-shadow:var(--shadow-sm)}
+.chart-box{background:linear-gradient(180deg,#FFFFFF 0%,#F8FCFE 100%);border:1px solid var(--line);
+  border-radius:var(--r);padding:14px 12px 10px;margin:0 0 14px;overflow-x:auto;box-shadow:var(--shadow-sm),var(--edge)}
 .chart-box svg{display:block;width:100%;min-width:300px;height:auto}
 .legend{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:13.5px;color:var(--ink-2);padding:4px 6px 8px}
 .legend i{display:inline-block;width:15px;height:4px;border:0;border-radius:3px;margin-right:6px;vertical-align:3px}
 
-/* 底部 Tab：内联 SVG 图标 + 胶囊选中态 */
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(4,1fr);
-  background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -6px 24px rgba(18,59,71,.07);
-  padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));backdrop-filter:blur(8px)}
-.tabs button{min-height:var(--tab-h);border:0;background:none;color:var(--ink-3);font-size:13.5px;font-weight:700;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:14px;
-  margin:0 3px;transition:background .18s ease,color .18s ease}
-.tabs button .ico{width:22px;height:22px;opacity:.78}
-.tabs button.on{color:var(--primary-dark);background:var(--primary-soft);box-shadow:inset 0 0 0 1px rgba(8,145,178,.16)}
-.tabs button.on .ico{opacity:1}
-
-/* 底部弹层 */
-.sheet{position:fixed;inset:0;z-index:40;background:rgba(12,40,50,.42);display:flex;align-items:flex-end;justify-content:center;
-  backdrop-filter:blur(2px)}
-.sheet-panel{background:var(--surface);width:100%;max-width:620px;max-height:88vh;overflow-y:auto;
-  border-radius:22px 22px 0 0;padding:18px 17px calc(20px + env(safe-area-inset-bottom,0px));
-  box-shadow:var(--shadow-lg);animation:sheetIn .22s cubic-bezier(.2,.8,.2,1) both}
-.sheet-panel::before{content:"";display:block;width:42px;height:4px;border-radius:999px;background:var(--line-2);margin:-6px auto 14px}
-@keyframes sheetIn{from{opacity:.6;transform:translateY(16px)}to{opacity:1;transform:none}}
-.sheet-panel h3{font-size:20px;margin:0 0 4px}
-.sheet-panel .sub{font-size:14.5px;color:var(--ink-3);margin:0 0 14px}
-.sheet-actions{display:flex;gap:10px;margin-top:16px}
+/* 页内编辑区：不是弹层、不是遮罩，就是页面里展开的一块卡片 */
+.sheet{max-width:var(--page-w);margin:22px auto 0;padding:0 20px;scroll-margin-top:16px}
+.sheet-panel{position:relative;background:#fff;border:1px solid var(--line-2);border-radius:var(--r-lg);
+  padding:22px 22px 20px;box-shadow:var(--shadow-lg),var(--edge);animation:panelIn .2s ease both}
+.sheet-panel::before{content:"";position:absolute;left:22px;right:22px;top:0;height:3px;border-radius:0 0 4px 4px;
+  background:var(--grad-tech);opacity:.9}
+@keyframes panelIn{from{opacity:.4;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.sheet-panel h3{font-size:21px;margin:2px 0 5px}
+.sheet-panel .sub{font-size:14.5px;color:var(--ink-3);margin:0 0 16px}
+.sheet-actions{display:flex;gap:10px;margin-top:18px}
 .sheet-actions .btn{flex:1}
-@media (min-width:700px){.sheet{align-items:center}.sheet-panel{border-radius:18px;max-height:86vh}}
 
-.toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + 18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
-  z-index:60;background:#123B47;color:#fff;padding:10px 18px;border-radius:999px;font-size:15px;font-weight:600;
-  opacity:0;pointer-events:none;transition:opacity .2s;max-width:88vw;text-align:center;box-shadow:var(--shadow-lg)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  z-index:60;background:#103A47;color:#fff;padding:11px 19px;border-radius:999px;font-size:15px;font-weight:600;
+  opacity:0;pointer-events:none;transition:opacity .2s;max-width:88vw;text-align:center;
+  box-shadow:0 14px 34px -10px rgba(16,58,71,.55)}
 .toast.on{opacity:1}
 
 /* 折叠卡片 */
 details.card{padding:0}
-details.card summary{padding:14px 17px;font-weight:700;font-size:16px;cursor:pointer;list-style:none;min-height:48px}
+details.card summary{padding:15px 19px;font-weight:700;font-size:16px;cursor:pointer;list-style:none;min-height:48px}
 details.card summary::-webkit-details-marker{display:none}
 details.card summary::after{content:"＋";float:right;width:27px;height:27px;line-height:25px;text-align:center;
   border-radius:50%;background:var(--primary-soft);color:var(--primary-dark);font-size:17px;font-weight:800}
 details.card[open] summary::after{content:"－"}
-details.card[open]{border-color:var(--line-2);box-shadow:var(--shadow)}
-details.card .detail-body{padding:0 17px 16px;border-top:1px solid var(--line);font-size:15.5px;color:var(--ink-2)}
+details.card[open]{border-color:var(--line-2);box-shadow:var(--shadow-lg)}
+details.card .detail-body{padding:0 19px 17px;border-top:1px solid var(--line);font-size:15.5px;color:var(--ink-2)}
 details.card .detail-body p:last-child{margin-bottom:0}
+
+/* 网页页脚 */
+.footer{border-top:1px solid var(--line);background:rgba(255,255,255,.66);backdrop-filter:blur(8px)}
+.footer-in{max-width:var(--page-w);margin:0 auto;padding:20px 20px 30px}
+.footer p{margin:0 0 5px;font-size:14.5px;color:var(--ink-2)}
+.footer p:last-child{margin:0}
 
 /* 高对比大字：关掉全部装饰，只留粗边与深色 */
 body.hc{--bg:#FFFFFF;--surface:#FFFFFF;--surface-2:#F0F0F0;--surface-3:#E8E8E8;--ink:#001A22;--ink-2:#123B47;
   --ink-3:#33505A;--line:#8FA9B2;--line-2:#5F7C87;--primary:#005F78;--primary-solid:#00485C;--primary-dark:#00485C;
-  --primary-soft:#E6F2F5;--primary-faint:#FFFFFF;--grad:#00485C;background:#fff;font-size:19px}
-body.hc .card,body.hc .card.hero,body.hc .stat,body.hc .list li,body.hc .chart-box,body.hc .table-scroll{
-  background:#fff!important;box-shadow:none;border-width:2px}
-body.hc .card.hero::before,body.hc .card.hero::after,body.hc .stat::before,body.hc .banner::before,
-body.hc .empty::before,body.hc .empty::after,body.hc .boundary::before{display:none}
-body.hc .btn,body.hc .btn.primary,body.hc .chip,body.hc .subtabs button.on{border-width:2px;box-shadow:none;font-weight:800}
-body.hc .btn.primary{background:#00485C}
+  --primary-soft:#E6F2F5;--primary-faint:#FFFFFF;--grad:#00485C;--grad-deep:#00485C;--grad-tech:#00485C;
+  --shadow:none;--shadow-sm:none;--shadow-lg:none;--edge:none;
+  background:#fff;font-size:19px}
+body.hc .topbar{background:#fff;backdrop-filter:none;box-shadow:none}
+body.hc .topbar::after,body.hc .boundary::before,body.hc .live-dot,body.hc .card.hero::after,
+body.hc .card.hero > svg.hero-wave,body.hc .stat::after,
+body.hc .sheet-panel::before,body.hc .stat::before,body.hc .banner::before,
+body.hc .empty::before,body.hc .empty::after,body.hc h2::before{display:none}
+body.hc .card,body.hc .card.hero,body.hc .stat,body.hc .list li,body.hc .chart-box,body.hc .table-scroll,
+body.hc .sheet-panel,body.hc .top-meta,body.hc .footer{
+  background:#fff!important;background-image:none!important;box-shadow:none;border-width:2px}
+body.hc .btn,body.hc .btn.primary,body.hc .btn.accent,body.hc .btn.danger,body.hc .chip,
+body.hc .subtabs button.on,body.hc .nav button.on{border-width:2px;box-shadow:none;font-weight:800;
+  background:#fff;background-image:none;color:#001A22}
+body.hc .btn.primary,body.hc .btn.accent,body.hc .btn.danger{background:#00485C!important;color:#fff!important}
+body.hc .nav button.on{border-bottom:3px solid #00485C}
 body.hc .banner,body.hc .boundary{box-shadow:none}
 body.hc .boundary,body.hc .small,body.hc .help,body.hc .sub{color:var(--ink-2);font-size:15px}
-body.hc .tabs button{font-size:16px}
 body.hc .sheet-panel{animation:none}
 body.hc .brand .logo{background:#00485C;box-shadow:none}
-body.hc .date-pill,body.hc .chart-box{box-shadow:none}
+body.hc .date-pill,body.hc .chart-box,body.hc .link-title .no{box-shadow:none}
+body.hc .footer{backdrop-filter:none}
 
 /* 打印：屏幕隐藏，打印时只留 A4 内容 */
 #print-root{display:none}
 @media print{
   @page{size:A4;margin:14mm 13mm}
   html{scroll-behavior:auto}
-  body{background:#fff;color:#000;font:10.5pt/1.5 var(--font)}
-  #app,#tabs,#sheet,#toast{display:none!important}
+  body{background:#fff!important;color:#000;font:10.5pt/1.5 var(--font)}
+  #app,#toast{display:none!important}
   #print-root{display:block}
   .print-head{border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:12px}
   .print-head h1{font-size:17pt;margin:0 0 4px}
@@ -313,20 +351,37 @@ body.hc .date-pill,body.hc .chart-box{box-shadow:none}
   a{color:#000;text-decoration:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}html{scroll-behavior:auto}}
-@media (max-width:520px){
+@media (max-width:620px){
+  .card.hero > svg.hero-wave{display:none}
+  body{font-size:16.5px}
+  .topbar-in{padding:12px 14px 8px}
+  .brand{font-size:19px}
+  .brand .logo{width:38px;height:38px;border-radius:12px}
+  .top-meta{font-size:12px;padding:5px 10px}
+  .nav{padding:0 8px;gap:0}
+  .nav button{padding:9px 12px;font-size:15px;flex:1 1 auto}
+  .boundary{padding:8px 14px 9px 28px}
+  .boundary::before{left:14px;top:14px}
+  .view{padding:20px 14px 36px}
+  .sheet{padding:0 14px;margin-top:16px}
+  .sheet-panel{padding:18px 16px}
+  .sheet-panel::before{left:16px;right:16px}
+  .card{padding:15px 16px}
+  .card.hero{padding:18px 16px 18px 20px}
+  .footer-in{padding:18px 14px 26px}
+  h1{font-size:27px}
+  h2{font-size:20px}
   .grid3{grid-template-columns:repeat(2,minmax(0,1fr))}
   .grid3 > :last-child:nth-child(odd){grid-column:1 / -1}
+  .quick{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .btn{padding:9px 12px;font-size:15.5px}
   #q-input{flex-basis:100%!important;min-width:0!important}
   [data-act=add-question]{width:100%}
 }
 @media (max-width:400px){
-  body{font-size:16.5px}
-  .view{padding-left:11px;padding-right:11px}
-  .card{padding:13px 14px}
-  .card.hero{padding:16px 14px 16px 19px}
-  .btn{padding:9px 12px;font-size:15.5px}
-  .boundary{padding-left:27px}
-  .boundary::before{left:12px}
+  .quick{grid-template-columns:1fr}
+  .sheet-actions{flex-direction:column}
+  .top-meta{display:none}
 }
 </style>
 </head>
@@ -334,28 +389,34 @@ body.hc .date-pill,body.hc .chart-box{box-shadow:none}
 <div id="app">
   <header class="topbar" id="topbar">
     <div class="topbar-in">
-      <button type="button" class="brand" data-act="go" data-view="today"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12h3.6l2.4-6 4.6 12 2.5-6h6"/></svg></span><span class="brand-txt">透析照护助手<small>本机保存 · 不上传</small></span></button>
-      <div class="top-actions">
-        <button type="button" class="btn tiny ghost" data-act="go" data-view="data">数据与设置</button>
-      </div>
+      <button type="button" class="brand" data-act="go" data-view="today"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12h3.6l2.4-6 4.6 12 2.5-6h6"/></svg></span><span class="brand-txt">透析照护助手<small>患者与家属的护理记录页</small></span></button>
+      <div class="top-meta"><span class="live-dot"></span>数据只存本机 · 不上传</div>
     </div>
+    <nav class="nav" id="nav" aria-label="主导航">
+      <button type="button" data-act="go" data-view="today">今天</button>
+      <button type="button" data-act="go" data-view="records">记录</button>
+      <button type="button" data-act="go" data-view="triage">排查</button>
+      <button type="button" data-act="go" data-view="knowledge">知识</button>
+      <button type="button" data-act="go" data-view="data">数据与设置</button>
+    </nav>
     <p class="boundary">护理记录工具 · 不诊断、不调药、不替代医生 · 急症联系透析中心或 120</p>
   </header>
+
+  <section id="sheet" class="sheet" hidden aria-label="编辑区"></section>
   <main id="view" class="view" role="main" aria-live="off"></main>
+
+  <footer class="footer">
+    <div class="footer-in">
+      <p><b>透析照护助手</b> · 一个可离线使用的护理记录网页，不是医疗设备。</p>
+      <p class="small">记录保存在当前浏览器的本机存储里，换设备、清缓存都会丢，请定期导出 JSON 备份。页面不会主动请求任何外部资源；外链只在你点击时打开。</p>
+    </div>
+  </footer>
 </div>
 
-<nav class="tabs" id="tabs" aria-label="主导航">
-  <button type="button" data-act="go" data-view="today"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3"/></svg><span>今天</span></button>
-  <button type="button" data-act="go" data-view="records"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.1"/><circle cx="4" cy="12" r="1.1"/><circle cx="4" cy="18" r="1.1"/></svg><span>记录</span></button>
-  <button type="button" data-act="go" data-view="triage"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.8l8 3v6.1c0 4.8-3.4 7.9-8 9.1-4.6-1.2-8-4.3-8-9.1V5.8z"/><path d="M12 8.5v7M8.5 12h7"/></svg><span>排查</span></button>
-  <button type="button" data-act="go" data-view="knowledge"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 5.5v15M9 8h7M9 12h5"/></svg><span>知识</span></button>
-</nav>
-
-<div id="sheet" class="sheet" hidden></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <div id="print-root" aria-hidden="true"></div>
 
-<script>window.APP_DATA={"version":1,"generated":"2026-11-08","source":{"title":"医院公开宣教海报（两张）","posters":["重症肾脏病 · 血液净化科常用口服药物一览表","健康宣教二维码树"],"note":"链接由两张公开宣教海报上的二维码解码得到，仅作索引。主题名、药名、剂量一律以医院海报原图和透析中心交代为准，本仓库不猜测、不补写、不解释。","pharmacyPhone":"85323591","pharmacyNote":"表中没有需要查看的药品信息，可致电药学部 85323591 帮助查阅。","openHint":"部分链接为微信内内容或活码中转页，浏览器可能打不开正文。可在微信里打开、复制链接后用另一台设备打开，或直接扫医院墙上的海报原图。"},"groups":{"tree":{"title":"健康宣教 · 22 条","hint":"按海报上的位置排序编号，编号不等于墙上顺序。主题以海报原图为准。"},"drug":{"title":"常用口服药 · 38 条","hint":"按海报行列顺序编号。药名与剂量以海报原图、医生处方为准；本工具不写药名之外的任何用药信息。"}},"cards":[{"id":"c1","title":"透析中血糖会变，只测上机那一次看不出后半程","body":"透析过程中血糖可能发生变化，不同阶段不一样。把上机、透析中、透析末期、下机、透析后的数值各自记下来，医生才看得出是哪一段在变。","ask":"该在哪些时点测、要不要加测，请让透析中心写下来。"},{"id":"c2","title":"一个数值不如一个带时刻的数值","body":"记血糖时顺手带上「已透析几分钟 / 还剩几分钟」、当时有没有不舒服、有没有刚吃过东西。三次这样记下来，比三十个孤零零的数字有用。","ask":"复诊时把这张按分钟排的时间轴打印出来带给医生。"},{"id":"c3","title":"症状出现，先告诉现场的人","body":"出汗、手抖、心慌、头晕、胸闷、气短、意识模糊、抽搐，出现就先告知透析室工作人员，不要先翻手机查资料。工具里也是这个顺序：第一个按钮是联系，第二个才是记录。","ask":"事后把发生时刻、当时数值、怎么处理、后来怎样补齐。"},{"id":"c4","title":"吃的东西也记一笔","body":"加餐、进食和血糖记在同一条时间轴上，才看得出吃完之后数值有没有稳住。记「几点吃了什么」就够，不用算热量。","ask":"透析日要不要加餐、怎么加，按透析中心交代来。"},{"id":"c5","title":"内瘘每天按教过的方法自查","body":"按透析中心教的手法查震颤和杂音。摸不到、明显变弱、或和平时不一样，记录发现时间并立即联系透析中心；不要按压、不要自行处理。","ask":"自查手法不确定的，下次透析请护士再教一遍。"},{"id":"c6","title":"体重照抄透析单，工具只做减法","body":"透前、透后体重照单子填，工具会显示与自填干体重的差值。这个差值只是记录，不是脱水量建议，也不能拿来自己调。","ask":"干体重有变动，以透析中心最新交代为准。"},{"id":"c7","title":"化验单只抄数，不解释","body":"把项目名、数值、单位、参考范围、采样日期抄进来，趋势能看变化。指标是什么意思、要不要处理，由医生解释。","ask":"把看不懂的项目写进「待问医生」，别自行查结论。"},{"id":"c8","title":"药单是照着抄的，不是工具开的","body":"药名、剂量、时间都由家属照医生开的单子填，今天吃没吃打个勾就行。任何加减、停用、换时间，先问医生。","ask":"透析日要不要调整，写进待问医生清单。"},{"id":"c9","title":"提醒不是报警","body":"页面里的「该测血糖了」只在工具开着的时候出现；手机切到后台、锁屏、清缓存都可能让它停。建议同时用手机自带闹钟兜底，别把这个页面当监护设备。","ask":"急症一律联系透析中心或拨打 120，不要等提示。"}],"triage":[{"level":"red","title":"红 · 立即联系透析中心或拨打 120","items":["意识改变、抽搐、叫不醒","胸痛、明显呼吸困难","内瘘震颤或杂音消失","出血不止、黑便、大片瘀斑","透析中或透析后出现抽搐、意识模糊、胸闷气短","血糖低于医生事先给的线且伴有不适"],"steps":"先联系现场医护或拨号 → 把刚才记下的时刻、数值、症状一起说清楚 → 处置与转归事后补记。页面不解释原因、不给药。","call":"立即拨打"},{"level":"amber","title":"黄 · 复测、记录，并联系透析中心咨询","items":["透析中或透析后头晕、出汗、手抖、心慌","血糖较前明显下降但没有严重症状","血压明显偏离医生给的范围","体重短期内明显上升、进食明显减少","透析中或透析后低热"],"steps":"按医生事先给的时点复测 → 记下时间点与数值 → 按医生事先交代的流程处理 → 打电话说明发生了什么、什么时刻、数值多少。","call":"联系透析中心"},{"level":"green","title":"绿 · 记下来，下次透析带给医生看","items":["轻微乏力、口味变化、睡眠变化","单次数值略偏但没有不适"],"steps":"建议记入今日备注，不弹警告、不做判断。","call":"记录即可"}],"checklists":[{"sign":"透析后期头晕、出汗、手抖、胸闷","first":"立即测血糖，一键标记症状（自动带上已透析分钟 / 剩余分钟）；按医生事先给的处置流程处理；复测后记数值与转归","call":"症状出现即告知透析室工作人员；反复出现则复诊时带上时序记录"},{"sign":"内瘘震颤变弱或摸不到","first":"不要按压、不要自行处理，记录发现时间","call":"立即联系透析中心"},{"sign":"皮肤瘀斑、牙龈出血、黑便","first":"记录部位与时间，带上最近一次血常规结果","call":"立即联系医生"},{"sign":"体重短期内明显上升","first":"回看饮水与饮食记录，核对透前体重","call":"下次透析前告知透析室，不自行调整饮水或用药"},{"sign":"透析后发热","first":"记体温与时间点，看是否伴寒战","call":"体温持续或伴寒战，联系透析中心"}],"symptoms":["出汗","手抖","心慌","头晕","胸闷","气短","抽搐","意识模糊","乏力","其他"],"labNames":["血红蛋白","血小板","钾","磷","钙","PTH","血糖","HbA1c","白蛋白","肌酐"],"dailyTypes":[{"key":"weight","label":"体重","unit":"kg","numeric":true},{"key":"glucose","label":"血糖","unit":"mmol/L","numeric":true},{"key":"sbp","label":"收缩压","unit":"mmHg","numeric":true},{"key":"dbp","label":"舒张压","unit":"mmHg","numeric":true},{"key":"hr","label":"心率","unit":"次/分","numeric":true},{"key":"temp","label":"体温","unit":"℃","numeric":true},{"key":"water","label":"饮水","unit":"mL","numeric":true},{"key":"urine","label":"尿量","unit":"mL","numeric":true},{"key":"meal","label":"进食 / 加餐","unit":"","numeric":false},{"key":"symptom","label":"症状","unit":"","numeric":false},{"key":"note","label":"备注","unit":"","numeric":false}],"glucoseTags":["透析前","透析中","透析后","加餐后","空腹","睡前","其他"],"disclaimer":"本工具用于日常护理记录与就诊沟通，不构成医疗建议、不用于诊断或治疗决策。出现急症请立即联系透析中心或拨打 120。所有个人健康数据仅保存在本机，不上传。","links":{"drug":[{"no":1,"url":"http://qr61.cn/otkFrD/q25waTM","host":"qr61.cn","x":179,"y":422},{"no":2,"url":"http://qr61.cn/otkFrD/qbnhDvM","host":"qr61.cn","x":323,"y":421},{"no":3,"url":"http://qr71.cn/otkFrD/qJexZeO","host":"qr71.cn","x":469,"y":421},{"no":4,"url":"http://qr71.cn/otkFrD/qlfstlk","host":"qr71.cn","x":612,"y":419},{"no":5,"url":"http://qr61.cn/otkFrD/qeV7hp2","host":"qr61.cn","x":766,"y":422},{"no":6,"url":"http://qr61.cn/otkFrD/qp9W0No","host":"qr61.cn","x":918,"y":421},{"no":7,"url":"http://qr61.cn/otkFrD/q9vIvsA","host":"qr61.cn","x":1063,"y":423},{"no":8,"url":"http://qr61.cn/otkFrD/q1dmc2d","host":"qr61.cn","x":177,"y":597},{"no":9,"url":"http://qr61.cn/otkFrD/qnsri6k","host":"qr61.cn","x":323,"y":593},{"no":10,"url":"http://qr61.cn/otkFrD/qcU9dpH","host":"qr61.cn","x":469,"y":593},{"no":11,"url":"http://qr71.cn/otkFrD/qt5xD4z","host":"qr71.cn","x":616,"y":596},{"no":12,"url":"http://qr61.cn/otkFrD/qeffz9D","host":"qr61.cn","x":768,"y":596},{"no":13,"url":"http://qr61.cn/otkFrD/qdZS54I","host":"qr61.cn","x":922,"y":597},{"no":14,"url":"http://qr71.cn/otkFrD/qEk08bQ","host":"qr71.cn","x":1068,"y":597},{"no":15,"url":"http://qr61.cn/otkFrD/qGaWIND","host":"qr61.cn","x":176,"y":771},{"no":16,"url":"http://qr61.cn/otkFrD/qgQTwgJ","host":"qr61.cn","x":323,"y":770},{"no":17,"url":"http://qr61.cn/otkFrD/qPUM2EW","host":"qr61.cn","x":469,"y":769},{"no":18,"url":"http://qr61.cn/otkFrD/q8dYic1","host":"qr61.cn","x":616,"y":771},{"no":19,"url":"http://qr61.cn/otkFrD/qYdd8nc","host":"qr61.cn","x":769,"y":771},{"no":20,"url":"http://qr61.cn/otkFrD/qyUSR5U","host":"qr61.cn","x":924,"y":770},{"no":21,"url":"http://qr61.cn/otkFrD/qeFrm1M","host":"qr61.cn","x":1070,"y":769},{"no":22,"url":"http://qr61.cn/otkFrD/qRIP0VK","host":"qr61.cn","x":173,"y":947},{"no":23,"url":"http://qr61.cn/otkFrD/qjHgiHM","host":"qr61.cn","x":320,"y":943},{"no":24,"url":"http://qr61.cn/otkFrD/qkPtipb","host":"qr61.cn","x":469,"y":945},{"no":25,"url":"http://qr71.cn/otkFrD/qEC06IU","host":"qr71.cn","x":616,"y":944},{"no":26,"url":"http://qr71.cn/otkFrD/ql8Svxn","host":"qr71.cn","x":772,"y":942},{"no":27,"url":"http://qr61.cn/otkFrD/qiG7zcd","host":"qr61.cn","x":925,"y":943},{"no":28,"url":"http://qr61.cn/otkFrD/qv9hf79","host":"qr61.cn","x":1072,"y":943},{"no":29,"url":"http://qr61.cn/otkFrD/qGmsBM9","host":"qr61.cn","x":172,"y":1109},{"no":30,"url":"http://qr61.cn/otkFrD/q4Hs0V5","host":"qr61.cn","x":321,"y":1109},{"no":31,"url":"http://qr61.cn/otkFrD/qRfEyUm","host":"qr61.cn","x":469,"y":1107},{"no":32,"url":"http://qr61.cn/otkFrD/q1bwJci","host":"qr61.cn","x":616,"y":1103},{"no":33,"url":"http://qr61.cn/otkFrD/qdAcF5P","host":"qr61.cn","x":771,"y":1103},{"no":34,"url":"http://qr61.cn/otkFrD/qF9JyUY","host":"qr61.cn","x":926,"y":1102},{"no":35,"url":"http://qr71.cn/otkFrD/qvu0l46","host":"qr71.cn","x":1076,"y":1101},{"no":36,"url":"http://qr61.cn/otkFrD/qYWNE8d","host":"qr61.cn","x":170,"y":1287},{"no":37,"url":"http://qr61.cn/otkFrD/qAn4zsU","host":"qr61.cn","x":317,"y":1284},{"no":38,"url":"http://qr71.cn/otkFrD/qH0yq4a","host":"qr71.cn","x":465,"y":1282}],"tree":[{"no":1,"url":"https://weixin.qq.com/sph/AY8y2Lnls","host":"weixin.qq.com","x":762,"y":44},{"no":2,"url":"https://weixin.qq.com/sph/AWzEoZSJ1","host":"weixin.qq.com","x":946,"y":78},{"no":3,"url":"https://weixin.qq.com/sph/AbCcgoj9R","host":"weixin.qq.com","x":581,"y":199},{"no":4,"url":"https://weixin.qq.com/sph/AjZjU7tFB","host":"weixin.qq.com","x":1118,"y":165},{"no":5,"url":"https://weixin.qq.com/sph/AovbKnNf5","host":"weixin.qq.com","x":860,"y":328},{"no":6,"url":"https://6l1ro6.58u.cn/a/OzdeQj4/","host":"6l1ro6.58u.cn","x":1281,"y":350},{"no":7,"url":"https://weixin.qq.com/sph/AFTh3Junj","host":"weixin.qq.com","x":659,"y":395},{"no":8,"url":"https://weixin.qq.com/sph/A9NwqcmvR","host":"weixin.qq.com","x":1061,"y":423},{"no":9,"url":"https://rj3ej4.58u.cn/a/OzdeqP4/","host":"rj3ej4.58u.cn","x":1509,"y":438},{"no":10,"url":"https://rj3ej4.58u.cn/a/AG2QNEZ/","host":"rj3ej4.58u.cn","x":529,"y":604},{"no":11,"url":"https://weixin.qq.com/sph/A2pjyAIFu","host":"weixin.qq.com","x":825,"y":597},{"no":12,"url":"https://6l1ro6.58u.cn/a/bJmVjBv/","host":"6l1ro6.58u.cn","x":1149,"y":652},{"no":13,"url":"https://6l1ro6.58u.cn/a/bKorj7n/","host":"6l1ro6.58u.cn","x":131,"y":671},{"no":14,"url":"https://6l1ro6.58u.cn/a/b1PWe1l/","host":"6l1ro6.58u.cn","x":331,"y":679},{"no":15,"url":"https://rj3ej4.58u.cn/a/OkJQ9Jj/","host":"rj3ej4.58u.cn","x":1385,"y":684},{"no":16,"url":"https://6l1ro6.58u.cn/a/b3eD0n1/","host":"6l1ro6.58u.cn","x":1640,"y":661},{"no":17,"url":"https://rj3ej4.58u.cn/a/R48mg65/","host":"rj3ej4.58u.cn","x":151,"y":894},{"no":18,"url":"https://rj3ej4.58u.cn/a/bDz0QMg/","host":"rj3ej4.58u.cn","x":562,"y":867},{"no":19,"url":"https://6l1ro6.58u.cn/a/b681jq2/","host":"6l1ro6.58u.cn","x":1035,"y":893},{"no":20,"url":"https://rj3ej4.58u.cn/a/R48mgwX/","host":"rj3ej4.58u.cn","x":364,"y":937},{"no":21,"url":"https://rj3ej4.58u.cn/a/bZj1n6x/","host":"rj3ej4.58u.cn","x":1321,"y":968},{"no":22,"url":"https://rj3ej4.58u.cn/a/O8NM0Bz/","host":"rj3ej4.58u.cn","x":1595,"y":943}]}};</script>
+<script>window.APP_DATA={"version":1,"generated":"2026-11-08","source":{"title":"医院公开宣教海报（两张）","posters":["重症肾脏病 · 血液净化科常用口服药物一览表","健康宣教二维码树"],"note":"链接由两张公开宣教海报上的二维码解码得到；每条的标题按海报上二维码下方的文字逐块放大辨认，存疑处记在 data/link-titles.json 的 _uncertain。仅作索引，本仓库不解释内容、不补写用药信息，剂量与处置一律以透析中心交代为准。","pharmacyPhone":"85323591","pharmacyNote":"表中没有需要查看的药品信息，可致电药学部 85323591 帮助查阅。","openHint":"部分链接为微信内内容或活码中转页，浏览器可能打不开正文。可在微信里打开、复制链接后用另一台设备打开，或直接扫医院墙上的海报原图。"},"groups":{"tree":{"title":"健康宣教 · 22 条","hint":"标题按海报上每个二维码下方的文字逐条辨认，按位置聚行排序编号。主题以医院海报原图为准。"},"drug":{"title":"常用口服药 · 38 条","hint":"标题按海报上每个二维码下方的药名逐条照抄，编号与海报自带的 1-38 一致。剂量、用法一律以处方和透析中心交代为准，本页不提供任何用药指导。"}},"cards":[{"id":"c1","title":"透析中血糖会变，只测上机那一次看不出后半程","body":"透析过程中血糖可能发生变化，不同阶段不一样。把上机、透析中、透析末期、下机、透析后的数值各自记下来，医生才看得出是哪一段在变。","ask":"该在哪些时点测、要不要加测，请让透析中心写下来。"},{"id":"c2","title":"一个数值不如一个带时刻的数值","body":"记血糖时顺手带上「已透析几分钟 / 还剩几分钟」、当时有没有不舒服、有没有刚吃过东西。三次这样记下来，比三十个孤零零的数字有用。","ask":"复诊时把这张按分钟排的时间轴打印出来带给医生。"},{"id":"c3","title":"症状出现，先告诉现场的人","body":"出汗、手抖、心慌、头晕、胸闷、气短、意识模糊、抽搐，出现就先告知透析室工作人员，不要先翻手机查资料。工具里也是这个顺序：第一个按钮是联系，第二个才是记录。","ask":"事后把发生时刻、当时数值、怎么处理、后来怎样补齐。"},{"id":"c4","title":"吃的东西也记一笔","body":"加餐、进食和血糖记在同一条时间轴上，才看得出吃完之后数值有没有稳住。记「几点吃了什么」就够，不用算热量。","ask":"透析日要不要加餐、怎么加，按透析中心交代来。"},{"id":"c5","title":"内瘘每天按教过的方法自查","body":"按透析中心教的手法查震颤和杂音。摸不到、明显变弱、或和平时不一样，记录发现时间并立即联系透析中心；不要按压、不要自行处理。","ask":"自查手法不确定的，下次透析请护士再教一遍。"},{"id":"c6","title":"体重照抄透析单，工具只做减法","body":"透前、透后体重照单子填，工具会显示与自填干体重的差值。这个差值只是记录，不是脱水量建议，也不能拿来自己调。","ask":"干体重有变动，以透析中心最新交代为准。"},{"id":"c7","title":"化验单只抄数，不解释","body":"把项目名、数值、单位、参考范围、采样日期抄进来，趋势能看变化。指标是什么意思、要不要处理，由医生解释。","ask":"把看不懂的项目写进「待问医生」，别自行查结论。"},{"id":"c8","title":"药单是照着抄的，不是工具开的","body":"药名、剂量、时间都由家属照医生开的单子填，今天吃没吃打个勾就行。任何加减、停用、换时间，先问医生。","ask":"透析日要不要调整，写进待问医生清单。"},{"id":"c9","title":"提醒不是报警","body":"页面里的「该测血糖了」只在工具开着的时候出现；手机切到后台、锁屏、清缓存都可能让它停。建议同时用手机自带闹钟兜底，别把这个页面当监护设备。","ask":"急症一律联系透析中心或拨打 120，不要等提示。"}],"triage":[{"level":"red","title":"红 · 立即联系透析中心或拨打 120","items":["意识改变、抽搐、叫不醒","胸痛、明显呼吸困难","内瘘震颤或杂音消失","出血不止、黑便、大片瘀斑","透析中或透析后出现抽搐、意识模糊、胸闷气短","血糖低于医生事先给的线且伴有不适"],"steps":"先联系现场医护或拨号 → 把刚才记下的时刻、数值、症状一起说清楚 → 处置与转归事后补记。页面不解释原因、不给药。","call":"立即拨打"},{"level":"amber","title":"黄 · 复测、记录，并联系透析中心咨询","items":["透析中或透析后头晕、出汗、手抖、心慌","血糖较前明显下降但没有严重症状","血压明显偏离医生给的范围","体重短期内明显上升、进食明显减少","透析中或透析后低热"],"steps":"按医生事先给的时点复测 → 记下时间点与数值 → 按医生事先交代的流程处理 → 打电话说明发生了什么、什么时刻、数值多少。","call":"联系透析中心"},{"level":"green","title":"绿 · 记下来，下次透析带给医生看","items":["轻微乏力、口味变化、睡眠变化","单次数值略偏但没有不适"],"steps":"建议记入今日备注，不弹警告、不做判断。","call":"记录即可"}],"checklists":[{"sign":"透析后期头晕、出汗、手抖、胸闷","first":"立即测血糖，一键标记症状（自动带上已透析分钟 / 剩余分钟）；按医生事先给的处置流程处理；复测后记数值与转归","call":"症状出现即告知透析室工作人员；反复出现则复诊时带上时序记录"},{"sign":"内瘘震颤变弱或摸不到","first":"不要按压、不要自行处理，记录发现时间","call":"立即联系透析中心"},{"sign":"皮肤瘀斑、牙龈出血、黑便","first":"记录部位与时间，带上最近一次血常规结果","call":"立即联系医生"},{"sign":"体重短期内明显上升","first":"回看饮水与饮食记录，核对透前体重","call":"下次透析前告知透析室，不自行调整饮水或用药"},{"sign":"透析后发热","first":"记体温与时间点，看是否伴寒战","call":"体温持续或伴寒战，联系透析中心"}],"symptoms":["出汗","手抖","心慌","头晕","胸闷","气短","抽搐","意识模糊","乏力","其他"],"labNames":["血红蛋白","血小板","钾","磷","钙","PTH","血糖","HbA1c","白蛋白","肌酐"],"dailyTypes":[{"key":"weight","label":"体重","unit":"kg","numeric":true},{"key":"glucose","label":"血糖","unit":"mmol/L","numeric":true},{"key":"sbp","label":"收缩压","unit":"mmHg","numeric":true},{"key":"dbp","label":"舒张压","unit":"mmHg","numeric":true},{"key":"hr","label":"心率","unit":"次/分","numeric":true},{"key":"temp","label":"体温","unit":"℃","numeric":true},{"key":"water","label":"饮水","unit":"mL","numeric":true},{"key":"urine","label":"尿量","unit":"mL","numeric":true},{"key":"meal","label":"进食 / 加餐","unit":"","numeric":false},{"key":"symptom","label":"症状","unit":"","numeric":false},{"key":"note","label":"备注","unit":"","numeric":false}],"glucoseTags":["透析前","透析中","透析后","加餐后","空腹","睡前","其他"],"disclaimer":"本工具用于日常护理记录与就诊沟通，不构成医疗建议、不用于诊断或治疗决策。出现急症请立即联系透析中心或拨打 120。所有个人健康数据仅保存在本机，不上传。","links":{"drug":[{"no":1,"title":"苯磺酸氨氯地平片（络活喜）","url":"http://qr61.cn/otkFrD/q25waTM","host":"qr61.cn","x":179,"y":422},{"no":2,"title":"苯磺酸左旋氨氯地平片（施慧达）","url":"http://qr61.cn/otkFrD/qbnhDvM","host":"qr61.cn","x":323,"y":421},{"no":3,"title":"硝苯地平缓释片（I）","url":"http://qr71.cn/otkFrD/qJexZeO","host":"qr71.cn","x":469,"y":421},{"no":4,"title":"硝苯地平控释片","url":"http://qr71.cn/otkFrD/qlfstlk","host":"qr71.cn","x":612,"y":419},{"no":5,"title":"琥珀酸美托洛尔缓释片","url":"http://qr61.cn/otkFrD/qeV7hp2","host":"qr61.cn","x":766,"y":422},{"no":6,"title":"卡维地洛片（金络）","url":"http://qr61.cn/otkFrD/qp9W0No","host":"qr61.cn","x":918,"y":421},{"no":7,"title":"沙库巴曲缬沙坦钠片（诺欣妥）","url":"http://qr61.cn/otkFrD/q9vIvsA","host":"qr61.cn","x":1063,"y":423},{"no":8,"title":"氢氯噻嗪片","url":"http://qr61.cn/otkFrD/q1dmc2d","host":"qr61.cn","x":177,"y":597},{"no":9,"title":"阿司匹林肠溶片（拜阿司匹林）","url":"http://qr61.cn/otkFrD/qnsri6k","host":"qr61.cn","x":323,"y":593},{"no":10,"title":"硫酸氢氯吡格雷片（波立维）","url":"http://qr61.cn/otkFrD/qcU9dpH","host":"qr61.cn","x":469,"y":593},{"no":11,"title":"单硝酸异山梨酯缓释胶囊","url":"http://qr71.cn/otkFrD/qt5xD4z","host":"qr71.cn","x":616,"y":596},{"no":12,"title":"阿托伐他汀钙片（美达信）","url":"http://qr61.cn/otkFrD/qeffz9D","host":"qr61.cn","x":768,"y":596},{"no":13,"title":"非诺贝特胶囊（力平之）","url":"http://qr61.cn/otkFrD/qdZS54I","host":"qr61.cn","x":922,"y":597},{"no":14,"title":"艾司奥美拉唑镁肠溶片","url":"http://qr71.cn/otkFrD/qEk08bQ","host":"qr71.cn","x":1068,"y":597},{"no":15,"title":"枸橼酸莫沙必利片","url":"http://qr61.cn/otkFrD/qGaWIND","host":"qr61.cn","x":176,"y":771},{"no":16,"title":"枯草杆菌二联活菌肠溶胶囊（美常安）","url":"http://qr61.cn/otkFrD/qgQTwgJ","host":"qr61.cn","x":323,"y":770},{"no":17,"title":"双歧杆菌乳杆菌三联活菌片（金双歧）","url":"http://qr61.cn/otkFrD/qPUM2EW","host":"qr61.cn","x":469,"y":769},{"no":18,"title":"复方消化酶胶囊","url":"http://qr61.cn/otkFrD/q8dYic1","host":"qr61.cn","x":616,"y":771},{"no":19,"title":"铝镁加混悬液（安达）","url":"http://qr61.cn/otkFrD/qYdd8nc","host":"qr61.cn","x":769,"y":771},{"no":20,"title":"百令胶囊","url":"http://qr61.cn/otkFrD/qyUSR5U","host":"qr61.cn","x":924,"y":770},{"no":21,"title":"肾衰宁颗粒","url":"http://qr61.cn/otkFrD/qeFrm1M","host":"qr61.cn","x":1070,"y":769},{"no":22,"title":"尿毒清颗粒","url":"http://qr61.cn/otkFrD/qRIP0VK","host":"qr61.cn","x":173,"y":947},{"no":23,"title":"吗替麦考酚酯分散片（赛可平）","url":"http://qr61.cn/otkFrD/qjHgiHM","host":"qr61.cn","x":320,"y":943},{"no":24,"title":"复方α-酮酸片（开同）","url":"http://qr61.cn/otkFrD/qkPtipb","host":"qr61.cn","x":469,"y":945},{"no":25,"title":"复方α-酮酸片（森同）","url":"http://qr71.cn/otkFrD/qEC06IU","host":"qr71.cn","x":616,"y":944},{"no":26,"title":"碳酸镧咀嚼片（福斯利诺）","url":"http://qr71.cn/otkFrD/ql8Svxn","host":"qr71.cn","x":772,"y":942},{"no":27,"title":"碳酸司维拉姆片（诺维乐）","url":"http://qr61.cn/otkFrD/qiG7zcd","host":"qr61.cn","x":925,"y":943},{"no":28,"title":"多糖铁复合物胶囊（力蜚能）","url":"http://qr61.cn/otkFrD/qv9hf79","host":"qr61.cn","x":1072,"y":943},{"no":29,"title":"甲钴胺片","url":"http://qr61.cn/otkFrD/qGmsBM9","host":"qr61.cn","x":172,"y":1109},{"no":30,"title":"辅酶Q10片（能气朗）","url":"http://qr61.cn/otkFrD/q4Hs0V5","host":"qr61.cn","x":321,"y":1109},{"no":31,"title":"叶酸片","url":"http://qr61.cn/otkFrD/qRfEyUm","host":"qr61.cn","x":469,"y":1107},{"no":32,"title":"苏黄止咳胶囊","url":"http://qr61.cn/otkFrD/q1bwJci","host":"qr61.cn","x":616,"y":1103},{"no":33,"title":"乙酰半胱氨酸颗粒（富露施）","url":"http://qr61.cn/otkFrD/qdAcF5P","host":"qr61.cn","x":771,"y":1103},{"no":34,"title":"盐酸莫西沙星片（拜复乐）","url":"http://qr61.cn/otkFrD/qF9JyUY","host":"qr61.cn","x":926,"y":1102},{"no":35,"title":"叶酸整蛋白型肠内营养剂（能全素）","url":"http://qr71.cn/otkFrD/qvu0l46","host":"qr71.cn","x":1076,"y":1101},{"no":36,"title":"碳酸钙D3片（钙尔奇D）","url":"http://qr61.cn/otkFrD/qYWNE8d","host":"qr61.cn","x":170,"y":1287},{"no":37,"title":"滋阴润肠口服液","url":"http://qr61.cn/otkFrD/qAn4zsU","host":"qr61.cn","x":317,"y":1284},{"no":38,"title":"右佐匹克隆片","url":"http://qr71.cn/otkFrD/qH0yq4a","host":"qr71.cn","x":465,"y":1282}],"tree":[{"no":1,"title":"脂肪肝健康科普","url":"https://weixin.qq.com/sph/AY8y2Lnls","host":"weixin.qq.com","x":762,"y":44},{"no":2,"title":"心肺复苏","url":"https://weixin.qq.com/sph/AWzEoZSJ1","host":"weixin.qq.com","x":946,"y":78},{"no":3,"title":"气道异物梗阻急救","url":"https://weixin.qq.com/sph/AbCcgoj9R","host":"weixin.qq.com","x":581,"y":199},{"no":4,"title":"预防跌倒健康科普","url":"https://weixin.qq.com/sph/AjZjU7tFB","host":"weixin.qq.com","x":1118,"y":165},{"no":5,"title":"AED知识科普","url":"https://weixin.qq.com/sph/AovbKnNf5","host":"weixin.qq.com","x":860,"y":328},{"no":6,"title":"慢性病患者自备药品的管理","url":"https://6l1ro6.58u.cn/a/OzdeQj4/","host":"6l1ro6.58u.cn","x":1281,"y":350},{"no":7,"title":"踝泵运动健康科普","url":"https://weixin.qq.com/sph/AFTh3Junj","host":"weixin.qq.com","x":659,"y":395},{"no":8,"title":"肾脏知识健康科普","url":"https://weixin.qq.com/sph/A9NwqcmvR","host":"weixin.qq.com","x":1061,"y":423},{"no":9,"title":"血液透析患者饮食","url":"https://rj3ej4.58u.cn/a/OzdeqP4/","host":"rj3ej4.58u.cn","x":1509,"y":438},{"no":10,"title":"血液净化方式的选择","url":"https://rj3ej4.58u.cn/a/AG2QNEZ/","host":"rj3ej4.58u.cn","x":529,"y":604},{"no":11,"title":"血脂报告单健康科普","url":"https://weixin.qq.com/sph/A2pjyAIFu","host":"weixin.qq.com","x":825,"y":597},{"no":12,"title":"「钾」的无声威胁","url":"https://6l1ro6.58u.cn/a/bJmVjBv/","host":"6l1ro6.58u.cn","x":1149,"y":652},{"no":13,"title":"血液透析知多少？","url":"https://6l1ro6.58u.cn/a/bKorj7n/","host":"6l1ro6.58u.cn","x":131,"y":671},{"no":14,"title":"导管的自我护理","url":"https://6l1ro6.58u.cn/a/b1PWe1l/","host":"6l1ro6.58u.cn","x":331,"y":679},{"no":15,"title":"血液透析患者相关的抗凝药物及注意事项","url":"https://rj3ej4.58u.cn/a/OkJQ9Jj/","host":"rj3ej4.58u.cn","x":1385,"y":684},{"no":16,"title":"透析中运动疗法","url":"https://6l1ro6.58u.cn/a/b3eD0n1/","host":"6l1ro6.58u.cn","x":1640,"y":661},{"no":17,"title":"内瘘术后锻炼","url":"https://rj3ej4.58u.cn/a/R48mg65/","host":"rj3ej4.58u.cn","x":151,"y":894},{"no":18,"title":"内瘘拔针后注意事项","url":"https://rj3ej4.58u.cn/a/bDz0QMg/","host":"rj3ej4.58u.cn","x":562,"y":867},{"no":19,"title":"如何预防高磷血症？","url":"https://6l1ro6.58u.cn/a/b681jq2/","host":"6l1ro6.58u.cn","x":1035,"y":893},{"no":20,"title":"透析当日，透析患者做哪些准备？","url":"https://rj3ej4.58u.cn/a/R48mgwX/","host":"rj3ej4.58u.cn","x":364,"y":937},{"no":21,"title":"正确认识干体重","url":"https://rj3ej4.58u.cn/a/bZj1n6x/","host":"rj3ej4.58u.cn","x":1321,"y":968},{"no":22,"title":"动静脉内瘘的管理路径","url":"https://rj3ej4.58u.cn/a/O8NM0Bz/","host":"rj3ej4.58u.cn","x":1595,"y":943}]}};</script>
 <script>/* 透析照护助手 · 应用逻辑
    零外部依赖。数据只写本机 localStorage，不上传、不预加载外链。 */
 (function(){
@@ -580,7 +641,7 @@ V.today=function(){
   if(storageBroken)h+=banner('danger','!','<p><b>本机浏览器不允许保存。</b>现在写的记录刷新就会丢，请到「数据与设置」里导出 JSON 备份。</p>');
   if(backupDue())h+=banner('warn','!','<p><b>超过一周没备份了。</b>手机清缓存、换设备都会抹掉本地记录，去「数据与设置」导出一份 JSON 存好。</p>');
   var gs=allGlucose(),last=gs[gs.length-1],s=activeSession(),e=s?sessionElapsed(s):null;
-  h+='<div class="card soft hero"><div class="spread"><b class="hero-title">'+icon('pulse')+'血糖监护</b><span class="small">透析当天按分钟记</span></div>';
+  h+='<div class="card soft hero"><svg class="hero-wave" viewBox="0 0 320 90" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="hw" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#22B8D8"/><stop offset="1" stop-color="#4F46E5"/></linearGradient></defs><path d="M0 62 L58 62 L74 30 L94 76 L114 50 L138 62 L320 62" fill="none" stroke="url(#hw)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="94" cy="76" r="5" fill="url(#hw)"/></svg><div class="spread"><b class="hero-title">'+icon('pulse')+'血糖监护</b><span class="small">透析当天按分钟记</span></div>';
   if(s){
     var rem=remainOf(s,e);
     h+='<div class="grid3 mt"><div class="stat"><div class="v num" id="clock-elapsed">'+sval(e)+'</div><div class="l">已透析（分钟）</div></div>'+
@@ -595,11 +656,11 @@ V.today=function(){
     h+='<div class="row mt"><button type="button" class="btn primary" data-act="go" data-view="monitor">进入血糖监护</button><button type="button" class="btn ghost" data-act="sheet" data-sheet="daily">记一个血糖（非透析时）</button></div>';
   }
   h+='</div>';
-  h+='<div class="btn-row tiles">'+
-     '<button type="button" class="btn big tile" data-act="sheet" data-sheet="daily">'+icon('pen')+'<span>记一笔</span></button>'+
-     '<button type="button" class="btn primary big tile" data-act="go" data-view="monitor">'+icon('pulse')+'<span>进入血糖监护</span></button>'+
-     '<button type="button" class="btn big tile" data-act="print" data-kind="summary">'+icon('doc')+'<span>就诊摘要</span></button>'+
-     '<button type="button" class="btn big tile" data-act="export-json">'+icon('archive')+'<span>备份</span></button></div>';
+  h+='<h2>快速开始</h2><div class="quick">'+
+     '<button type="button" class="btn" data-act="sheet" data-sheet="daily">'+icon('pen')+'记一笔</button>'+
+     '<button type="button" class="btn primary" data-act="go" data-view="monitor">'+icon('pulse')+'进入血糖监护</button>'+
+     '<button type="button" class="btn" data-act="print" data-kind="summary">'+icon('doc')+'打印就诊摘要</button>'+
+     '<button type="button" class="btn" data-act="export-json">'+icon('archive')+'导出备份</button></div>';
   var todayDaily=S.daily.filter(function(d){return d.date===today()});
   var medDone=S.medChecks.filter(function(m){return m.date===today()&&m.done}).length;
   var ev=lastSymptomPoint();
@@ -745,7 +806,7 @@ V.triage=function(){
 /* ---------------- 视图：知识 ---------------- */
 V.knowledge=function(){
   var h='<h1>知识</h1><p class="lead">能离线看的常识卡，加医院公开宣教与常用口服药的链接索引。</p>';
-  h+='<div class="field"><label for="search">搜索</label><input id="search" type="text" placeholder="搜常识、编号、链接或备注" value="'+attr(UI.q)+'" autocomplete="off"><span class="help">外链只在你主动点击时打开；工具本身不请求任何外部资源。</span></div>';
+  h+='<div class="field"><label for="search">搜索</label><input id="search" type="text" placeholder="搜常识、标题、编号、链接或备注" value="'+attr(UI.q)+'" autocomplete="off"><span class="help">外链只在你主动点击时打开；工具本身不请求任何外部资源。</span></div>';
   h+='<div id="knowledge-results"></div>';
   return h;
 };
@@ -762,16 +823,16 @@ function renderKnowledgeResults(){
       '<p class="small">具体监测节奏、处置与用药，以透析中心交代为准。</p></div></details>';
   }).join('');
   [['tree','宣教'],['drug','药物']].forEach(function(pair){
-    var key=pair[0],list=(LINKS[key]||[]).filter(function(l){return hit((GROUPS[key]||{}).title+' '+l.no+' '+l.url+' '+(S.linkNotes[key+'-'+l.no]||''))});
+    var key=pair[0],list=(LINKS[key]||[]).filter(function(l){return hit((GROUPS[key]||{}).title+' '+l.no+' '+l.title+' '+l.url+' '+(S.linkNotes[key+'-'+l.no]||''))});
     var g=GROUPS[key]||{};
     h+='<h2>'+esc(g.title||pair[1])+' <span class="small">（'+list.length+' 条）</span></h2>';
     if(g.hint)h+='<p class="small">'+esc(g.hint)+'</p>';
     if(!list.length){h+=empty('没有匹配的链接。');return}
     h+='<ul class="list">'+list.map(function(l){
       var nk=key+'-'+l.no,note=S.linkNotes[nk]||'';
-      return '<li><div style="min-width:0;flex:1"><div class="t">'+esc(pair[1])+' '+esc(l.no)+'　'+esc(l.host||'')+'</div>'+
+      return '<li><div style="min-width:0;flex:1"><div class="link-title">'+esc(l.title||(pair[1]+' '+l.no))+'<span class="no">'+esc(pair[1])+' '+esc(l.no)+'</span></div>'+
         '<div class="n" style="word-break:break-all">'+esc(l.url)+'</div>'+
-        '<input type="text" data-link-note="'+attr(nk)+'" value="'+attr(note)+'" placeholder="给这条写个备注（例如主题名）" style="min-height:48px;font-size:14px;margin-top:6px"></div>'+
+        '<input type="text" data-link-note="'+attr(nk)+'" value="'+attr(note)+'" placeholder="给这条写个备注（可选）" style="min-height:48px;font-size:14px;margin-top:6px"></div>'+
         '<div class="row tight" style="flex-direction:column;align-items:stretch">'+
         '<a class="btn tiny" href="'+attr(l.url)+'" target="_blank" rel="noopener noreferrer">打开</a>'+
         '<button type="button" class="btn tiny ghost" data-act="copy" data-url="'+attr(l.url)+'">复制</button></div></li>';
@@ -1004,13 +1065,14 @@ function openSheet(key,id,mode,extra){
   var cfg=SHEETS[key];if(!cfg)return;
   var c=cfg(id,mode,extra);
   UI.sheet={key:key,id:id||'',mode:mode||'',cfg:c};
-  var h='<div class="sheet-panel" role="dialog" aria-modal="true"><h3>'+esc(c.title)+'</h3><p class="sub">'+esc(c.sub||'')+'</p>';
+  var h='<div class="sheet-panel" role="region"><h3>'+esc(c.title)+'</h3><p class="sub">'+esc(c.sub||'')+'</p>';
   if(c.submit){
     h+='<form id="sheet-form">'+c.body+'<div class="sheet-actions"><button type="button" class="btn ghost" data-act="close-sheet">取消</button><button type="submit" class="btn primary">'+esc(c.submit)+'</button></div></form>';
     if(c.del&&c.del.id)h+='<button type="button" class="btn tiny ghost block mt" data-act="del" data-kind="'+attr(c.del.kind)+'" data-id="'+attr(c.del.id)+'"'+(c.del.sid?' data-sid="'+attr(c.del.sid)+'"':'')+'>删除这一条</button>';
   }else h+=c.body+'<div class="sheet-actions"><button type="button" class="btn ghost" data-act="close-sheet">关闭</button></div>';
   h+='</div>';
   var sh=byId('sheet');sh.innerHTML=h;sh.hidden=false;
+  if(sh.scrollIntoView)sh.scrollIntoView({block:'start'});
   var first=sh.querySelector('input:not([type=hidden]),select,textarea');
   if(first&&key!=='point')first.focus();
   syncChips(sh);
@@ -1218,8 +1280,10 @@ function delItem(kind,id,sid){
 /* ---------------- 渲染与事件 ---------------- */
 function render(){
   document.body.classList.toggle('hc',!!S.profile.highContrast);
-  byId('tabs').hidden=false; // 监护页也保留底部导航，随时能切到排查与知识
-  Array.prototype.forEach.call(document.querySelectorAll('#tabs [data-view]'),function(b){b.classList.toggle('on',b.dataset.view===UI.view)});
+  Array.prototype.forEach.call(document.querySelectorAll('#nav [data-view]'),function(b){
+    var on=b.dataset.view===UI.view;b.classList.toggle('on',on);
+    if(on)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
   var v=byId('view');
   v.innerHTML=(V[UI.view]||V.today)();
   byId('print-root').setAttribute('aria-hidden','true');
@@ -1328,7 +1392,6 @@ document.addEventListener('input',onInput);
 document.addEventListener('change',onChange);
 document.addEventListener('submit',onSubmit);
 document.addEventListener('keydown',onKey);
-document.addEventListener('click',function(e){if(e.target.id==='sheet')closeSheet()});
 render();
 clockTimer=setInterval(function(){if(UI.view==='monitor'||UI.view==='today')updateClock()},15000);
 window.addEventListener('focus',function(){if(UI.view==='monitor'||UI.view==='today')updateClock()});
