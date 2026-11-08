@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>透析陪护 · 应急 饮食 记录 陪护</title>
 <meta name="theme-color" content="#16302B">
+<link rel="icon" href="data:,">
 <style>
 /* ---------- 设计变量：暖纸底 + 生理盐水青 + 碘伏砖红（红只用于危重信号） ---------- */
 :root{
@@ -202,9 +203,9 @@ ol.steps li b{font-weight:600}
 /* ---------- 表单 ---------- */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* 血糖：值 + 时点 + 低值提醒 */
-.glu-row{display:flex;gap:8px;align-items:center;margin-top:5px}
+.glu-row{display:flex;gap:8px;align-items:flex-end;margin-top:5px}
 .glu-row input{flex:1;min-width:0}
-.glu-row select{flex:0 0 8.6em;width:8.6em;font-size:15px;padding:10px 6px}
+.glu-row select{flex:0 0 7.6em;width:7.6em;font-size:14.5px;padding:9px 7px}
 .glu-low-num{color:var(--alert);font-weight:700}
 .glu-warn{
   margin-top:8px;background:var(--alert-soft);border-left:2px solid var(--alert);
@@ -299,7 +300,7 @@ ol.steps li b{font-weight:600}
     <div class="hero-bar">
       <span class="mark">血液透析 · 家庭照护</span>
       <button class="iconbtn" id="themeBtn" aria-label="切换夜间模式" title="切换夜间模式">
-        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,104,104,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,144A88,88,0,0,1,104,32a88,88,0,1,0,112,112Z"/></svg>
       </button>
     </div>
     <h1>透析陪护</h1>
@@ -620,8 +621,8 @@ ol.steps li b{font-weight:600}
 
       <div class="card">
         <div class="card-head"><span class="card-title">要查资料，去这一页</span><span class="meta">knowledge</span></div>
-        <p class="hint" style="border-top:0;padding-top:0;margin-top:0">护理常识、问题排查，还有医院两张宣教海报上 <b>60 个二维码</b>的标题索引（22 条宣教 + 38 条药名），都在「照护知识」页。链接内容以医院原文为准。</p>
-        <div class="btn-row"><a class="btn" href="透析知识速查.html" style="text-decoration:none">打开照护知识</a></div>
+        <p class="hint" style="border-top:0;padding-top:0;margin-top:0">护理常识、问题排查，还有两张公开宣教海报上 <b>60 个二维码</b>的标题索引（22 条宣教 + 38 条药名），都在「照护知识」页。链接内容以资料原文为准。</p>
+        <div class="btn-row"><a class="btn" href="knowledge.html" style="text-decoration:none">打开照护知识</a></div>
       </div>
 
       <div class="card prose">
@@ -653,7 +654,7 @@ ol.steps li b{font-weight:600}
         <b>重要：</b>本卡只是家庭照护的辅助提醒，不能替代医生、护士的诊断和处置。任何用药调整、透析方案、化验判读，都以主管肾内科和透析中心的意见为准。出现大出血、意识不清、呼吸困难、持续胸痛，直接打 120。
       </div>
 
-      <p class="hint" style="margin-top:14px">版本 2.0 · 数据格式 dialysis.v1</p>
+      <p class="hint" style="margin-top:14px">版本 2.1 · 数据格式 dialysis.v1</p>
     </section>
 
   </main>
@@ -899,7 +900,7 @@ ol.steps li b{font-weight:600}
       if(r.note) lines.push("备注：" + r.note);
       lines.push("");
     });
-    download("透析记录_" + todayStr() + ".txt", lines.join("\r\n"), "text/plain");
+    download("dialysis-log-" + todayStr() + ".txt", lines.join("\r\n"), "text/plain");
     toast("已导出文本，可以发给医生");
   });
 

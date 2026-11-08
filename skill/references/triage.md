@@ -45,4 +45,4 @@
 
 ## 电话号码从哪来
 
-只从导出 JSON 的 `profile.centerPhone` 与 `profile.emergencyPhone` 取。没填就写「请先在工具的设置里填写透析中心电话」，不要自己编号码，也不要把海报上的药学部业务电话当急救电话用。
+只从导出 JSON 的 `profile.centerPhone` 与 `profile.emergencyPhone` 取。没填就写「请先在工具的设置里填写透析中心电话」，不要自己编号码，也不要把任何机构业务电话当急救电话用。

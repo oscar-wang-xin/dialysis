@@ -27,7 +27,7 @@ dialysisCare-*.csv
 *备份*.json
 *备份*.csv
 *记录导出*.csv
-透析记录_*.txt
+dialysis-log-*.txt
 *-backup-*.json
 
 # 浏览器本地数据、临时还原快照

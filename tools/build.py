@@ -4,9 +4,9 @@
 用法：  python tools/build.py
 模板：  src/*.tpl.html（以「透析」目录下那套工具为模板基线）
 数据：  data/qr-links.json + data/link-titles.json + data/knowledge.json
-产物：  仓库根目录 6 个自包含 HTML，双击即用、零外部依赖、可整目录拷到手机
+产物：  仓库根目录 6 个自包含 HTML（全英文文件名），双击即用、零外部依赖、可直接静态部署
 
-自检：外部资源引用、脚本闭合、占位符、数据完整性、页面间链接、隐私关键词。
+自检：外部资源、脚本闭合、占位符、数据完整性、页面间链接、隐私关键词、机构标识、ASCII 文件名。
 任何一项不过就不写产物。
 """
 import html
@@ -23,17 +23,22 @@ DATA = ROOT / 'data'
 
 PAGES = {
     'index.tpl.html':     'index.html',
-    'card.tpl.html':      '透析陪护综合卡.html',
-    'sos.tpl.html':       '透析应急速查卡.html',
-    'daily.tpl.html':     '透析每日记录.html',
-    'knowledge.tpl.html': '透析知识速查.html',
-    'guide.tpl.html':     '透析使用说明.html',
+    'card.tpl.html':      'care-card.html',
+    'sos.tpl.html':       'emergency.html',
+    'daily.tpl.html':     'daily-log.html',
+    'knowledge.tpl.html': 'knowledge.html',
+    'guide.tpl.html':     'guide.html',
 }
 
 # 只放具体可识别的真实数据，不放「病历号 / 身份证号」这类通用字段名，
 # 否则 PRIVACY.md 里提醒别人别提交的文字会把自己误报成泄密。
 PRIVACY_BANNED = [
     '王一平', '77 岁', '67 kg', '干体重 67', '剩约 40 分钟',
+]
+
+# 机构标识：不收录任何医院名称、科室抬头或业务电话
+ORG_BANNED = [
+    '85323591', '药学部', '血液净化科',
 ]
 
 PLACEHOLDERS = [
@@ -203,14 +208,25 @@ def self_check(outputs, app):
         if text.count('<style') != text.count('</style>'):
             problems.append('%s 的 style 标签数量不匹配' % name)
 
-    # 6. 隐私：全仓库文本不得出现真实患者信息
-    hit = []
+    # 6. 隐私 / 机构标识：全仓库文本不得出现真实患者信息或机构联系方式
+    #    先查本次要写出的产物（内存最新版），再查仓库其余文件；
+    #    磁盘上同名成品是上一版、马上会被覆盖，跳过避免误报。
+    hit, org_hit = [], []
+    for name, txt in outputs.items():
+        for word in PRIVACY_BANNED:
+            if word in txt:
+                hit.append('%s -> %s' % (name, word))
+        for word in ORG_BANNED:
+            if word in txt:
+                org_hit.append('%s -> %s' % (name, word))
     for p in sorted(ROOT.rglob('*')):
         if not p.is_file() or p.name.startswith('_patch_') or p.name == 'build.py':
             continue
+        if p.parent == ROOT and p.name in outputs:
+            continue
         if p.suffix.lower() not in ('.html', '.css', '.js', '.json', '.md', '.py', '.txt', ''):
             continue
-        if '.git' in p.parts or '__pycache__' in p.parts:
+        if '.git' in p.parts or '__pycache__' in p.parts or '.playwright-cli' in p.parts:
             continue
         try:
             txt = p.read_text(encoding='utf-8')
@@ -219,8 +235,21 @@ def self_check(outputs, app):
         for word in PRIVACY_BANNED:
             if word in txt:
                 hit.append('%s -> %s' % (p.relative_to(ROOT), word))
+        for word in ORG_BANNED:
+            if word in txt:
+                org_hit.append('%s -> %s' % (p.relative_to(ROOT), word))
     if hit:
         problems.append('疑似真实患者信息：' + '; '.join(hit))
+    if org_hit:
+        problems.append('疑似机构名称 / 联系方式：' + '; '.join(org_hit))
+
+    # 7. 部署友好：成品文件名必须 ASCII，根目录不得残留旧中文名页面
+    for name in outputs:
+        if not name.isascii():
+            problems.append('产物文件名含非 ASCII 字符：' + name)
+    for p in sorted(ROOT.glob('*.html')):
+        if not p.name.isascii():
+            problems.append('根目录残留旧中文名成品：' + p.name)
 
     return problems
 
@@ -282,7 +311,7 @@ def main():
           (len(app['links']['tree']), len(app['links']['drug']), len(titles['_uncertain'])))
     print('  常识卡    %d 张 / 分级排查 %d 级 / 问题清单 %d 条' %
           (len(app['cards']), len(app['triage']), len(app['checklists'])))
-    print('  自检      外部资源 / 占位符 / 数据完整性 / 页面链接 / 脚本闭合 / 隐私  全部通过')
+    print('  自检      外部资源 / 占位符 / 数据完整性 / 页面链接 / 脚本闭合 / 隐私 / 机构标识 / ASCII 文件名  全部通过')
     return 0
 
 

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>透析每日记录 · 体重 血压 血糖</title>
 <meta name="theme-color" content="#F4F1E9">
+<link rel="icon" href="data:,">
 <style>
 :root{
   --canvas:#F3F0E6;
@@ -75,9 +76,9 @@ body{
 .f input:focus{outline:0;border-bottom-color:var(--accent);background:var(--accent-soft)}
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:.45}
 .f.wide{grid-column:1/-1}
-.glu-row{display:flex;gap:8px;align-items:center;margin-top:5px}
+.glu-row{display:flex;gap:8px;align-items:flex-end;margin-top:5px}
 .glu-row input{flex:1;min-width:0}
-.glu-row select{flex:0 0 8.4em;width:8.4em;font-family:var(--f-body);font-size:15px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:var(--ctl);padding:9px 6px}
+.glu-row select{flex:0 0 7.4em;width:7.4em;font-family:var(--f-body);font-size:14.5px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:var(--ctl);padding:6px 6px}
 .glu-low-num{color:var(--alert)!important;border-bottom-color:var(--alert)!important}
 .glu-warn{margin-top:8px;background:var(--alert-soft);border-left:2px solid var(--alert);border-radius:0 var(--ctl) var(--ctl) 0;padding:9px 11px;font-size:13.5px;line-height:1.6;color:var(--ink)}
 .glu-warn b{color:var(--alert)}
@@ -167,7 +168,7 @@ tbody td .note{display:block;font-family:var(--f-body);font-size:12px;color:var(
     </div>
     <div class="tools">
       <button class="iconbtn" id="themeBtn" aria-label="切换夜间模式">
-        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M233.54,142.23a8,8,0,0,0-8-2,88.08,88.08,0,0,1-109.8-109.8,8,8,0,0,0-10-10,104.84,104.84,0,0,0-52.91,37A104,104,0,0,0,136,224a103.09,103.09,0,0,0,62.52-20.88,104.84,104.84,0,0,0,37-52.91A8,8,0,0,0,233.54,142.23ZM188.9,190.34A88,88,0,0,1,65.66,67.11a89,89,0,0,1,31.4-26A106,106,0,0,0,96,56,104.11,104.11,0,0,0,200,160,106,106,0,0,0,14.92-1.06A89,89,0,0,1,188.9,190.34Z"/></svg>
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,144A88,88,0,0,1,104,32a88,88,0,1,0,112,112Z"/></svg>
       </button>
     </div>
   </header>
@@ -363,49 +364,60 @@ tbody td .note{display:block;font-family:var(--f-body);font-size:12px;color:var(
     $("trendSub").textContent = "最近 " + pts.length + " 次记录，看有没有越透越涨";
   }
 
-  /* 低血糖即时提醒：与应急卡、饮食页统一口径，不用果汁 */
+  function renderGluTrend(){
+    var svg = $("gluSpark");
+    var all = state.records.filter(function(r){ return r.glu && !isNaN(parseFloat(r.glu)); });
+    var pts = all.slice(-14).map(function(r){ return parseFloat(r.glu); });
+    if(!pts.length){
+      svg.innerHTML = "";
+      $("gluAxL").textContent = "—"; $("gluAxR").textContent = "—";
+      $("gluSub").textContent = "还没有血糖记录。填一条就画得出来";
+      return;
+    }
+    if(pts.length === 1){
+      svg.innerHTML = "";
+      $("gluAxL").textContent = "这一条 " + pts[0].toFixed(1);
+      $("gluAxR").textContent = pts[0] < 3.9 ? "低血糖" : "正常范围";
+      $("gluSub").textContent = "再记一条，就能看出升降";
+      return;
+    }
+    var w = 460, h = 88, padX = 6, padY = 12;
+    var min = Math.min(3, Math.min.apply(null, pts));
+    var max = Math.max(12, Math.max.apply(null, pts));
+    if(max - min < 2) max = min + 2;
+    var step = (w - padX*2) / (pts.length - 1);
+    function Y(v){ return h - padY - ((v - min) / (max - min)) * (h - padY*2); }
+    var coords = pts.map(function(v, i){ return { x: padX + step*i, y: Y(v), v: v }; });
+    var d = "M" + coords.map(function(c){ return c.x.toFixed(1) + "," + c.y.toFixed(1); }).join("L");
+    var lowLine = '<line x1="' + padX + '" y1="' + Y(3.9).toFixed(1) + '" x2="' + (w-padX) + '" y2="' + Y(3.9).toFixed(1) +
+      '" stroke="var(--alert)" stroke-width="1" stroke-dasharray="4 4" opacity=".8"/>' +
+      '<text x="' + (w-padX) + '" y="' + (Y(3.9) - 3).toFixed(1) + '" text-anchor="end" font-size="9" fill="var(--alert)">3.9</text>';
+    var dots = coords.map(function(c){
+      return '<circle cx="' + c.x.toFixed(1) + '" cy="' + c.y.toFixed(1) + '" r="' + (c.v < 3.9 ? 3.2 : 2.4) +
+        '" fill="' + (c.v < 3.9 ? "var(--alert)" : "var(--accent)") + '"/>';
+    }).join("");
+    svg.innerHTML = lowLine +
+      '<path d="' + d + '" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>' + dots;
+    var lowCount = pts.filter(function(v){ return v < 3.9; }).length;
+    $("gluAxL").textContent = "最近 " + pts.length + " 次，最低 " + Math.min.apply(null, pts).toFixed(1);
+    $("gluAxR").textContent = lowCount ? ("低血糖 " + lowCount + " 次") : "没有低于 3.9";
+    $("gluSub").textContent = lowCount ? "红线是 3.9，红点就是低血糖那几次" : "最近几次都在 3.9 以上";
+  }
+
   function syncGluWarn(){
-    var v = parseFloat($("glu").value), w = $("gluWarn");
+    var v = parseFloat($("glu").value);
+    var w = $("gluWarn");
     if(!isNaN(v) && v > 0 && v < 3.9){
       w.innerHTML = "<b>低于 3.9，是低血糖。</b>人清醒：补 15 g 葡萄糖片或少量糖水，15 分钟后复测。人迷糊、叫不醒：侧躺、别喂、打 120。不要用香蕉、橘子、果汁救急，钾太高。";
-      w.hidden = false; $("glu").classList.add("glu-low-num");
+      w.hidden = false;
+      $("glu").classList.add("glu-low-num");
     }else{
-      w.hidden = true; w.textContent = ""; $("glu").classList.remove("glu-low-num");
+      w.hidden = true; w.textContent = "";
+      $("glu").classList.remove("glu-low-num");
     }
   }
   $("glu").addEventListener("input", syncGluWarn);
   $("glu").addEventListener("change", syncGluWarn);
-
-  /* 血糖走势：虚线是 3.9，低于它的点标红 */
-  function renderGluTrend(){
-    var svg = $("gluSpark");
-    var pts = state.records.filter(function(r){ return r.glu && !isNaN(parseFloat(r.glu)); })
-      .slice(-14).map(function(r){ return parseFloat(r.glu); });
-    if(pts.length < 2){
-      svg.innerHTML = "";
-      $("gluAxL").textContent = "—"; $("gluAxR").textContent = "—";
-      $("gluSub").textContent = "至少记两条血糖，才能看出走势";
-      return;
-    }
-    var w = 460, h = 88, padX = 6, padY = 12, LOW = 3.9;
-    var min = Math.min.apply(null, pts.concat([LOW]));
-    var max = Math.max.apply(null, pts.concat([LOW]));
-    var span = (max - min) || 1;
-    var step = (w - padX*2) / (pts.length - 1);
-    var coords = pts.map(function(v, i){
-      return [padX + step*i, h - padY - ((v-min)/span)*(h - padY*2)];
-    });
-    var yLow = h - padY - ((LOW-min)/span)*(h - padY*2);
-    var d = "M" + coords.map(function(c){ return c[0].toFixed(1) + "," + c[1].toFixed(1); }).join("L");
-    svg.innerHTML =
-      '<line x1="' + padX + '" y1="' + yLow.toFixed(1) + '" x2="' + (w-padX) + '" y2="' + yLow.toFixed(1) + '" stroke="var(--alert)" stroke-width="1.2" stroke-dasharray="5 4"/>' +
-      '<path d="' + d + '" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/>' +
-      coords.map(function(c, i){ return '<circle cx="' + c[0].toFixed(1) + '" cy="' + c[1].toFixed(1) + '" r="2.6" fill="' + (pts[i] < LOW ? "var(--alert)" : "var(--accent)") + '"/>'; }).join("") +
-      '<line x1="' + padX + '" y1="' + (h-padY) + '" x2="' + (w-padX) + '" y2="' + (h-padY) + '" stroke="var(--rule)" stroke-width="1"/>';
-    $("gluAxL").textContent = "最低 " + Math.min.apply(null, pts).toFixed(1);
-    $("gluAxR").textContent = "最高 " + Math.max.apply(null, pts).toFixed(1);
-    $("gluSub").textContent = "最近 " + pts.length + " 次，虚线是 3.9，低于它的点标红";
-  }
 
   $("save").addEventListener("click", function(){
     var rec = {
@@ -430,8 +442,8 @@ tbody td .note{display:block;font-family:var(--f-body);font-size:12px;color:var(
   function reset(){
     ["wPre","wPost","bp","glu","urine","uf","note"].forEach(function(id){ $(id).value = ""; });
     $("gluAt").value = "";
-    syms.forEach(function(c){ c.setAttribute("aria-pressed","false"); });
     syncGluWarn();
+    syms.forEach(function(c){ c.setAttribute("aria-pressed","false"); });
   }
   $("reset").addEventListener("click", reset);
 
@@ -450,17 +462,18 @@ tbody td .note{display:block;font-family:var(--f-body);font-size:12px;color:var(
       lines.push("————————");
       lines.push("日期：" + r.date);
       lines.push("透前 " + ((r.wPre || r.weight) || "—") + " kg　透后 " + (r.wPost||"—") + " kg　超滤 " + (r.uf||"—") + " L");
-      lines.push("血压 " + (r.bp||"—") + "　血糖 " + (r.glu||"—") + " mmol/L" + (r.gluAt ? "（" + r.gluAt + "）" : "") + "　尿量 " + (r.urine||"—") + " ml");
+      lines.push("血压 " + (r.bp||"—") + "　尿量 " + (r.urine||"—") + " ml");
+      lines.push("血糖 " + (r.glu||"—") + " mmol/L" + (r.gluAt ? "（" + r.gluAt + "）" : "") + (r.glu && parseFloat(r.glu) < 3.9 ? "　← 低血糖" : ""));
       if(r.symptoms && r.symptoms.length) lines.push("情况：" + r.symptoms.join("、"));
       if(r.note) lines.push("备注：" + r.note);
       lines.push("");
     });
-    download("透析记录_" + today() + ".txt", lines.join("\r\n"), "text/plain");
+    download("dialysis-log-" + today() + ".txt", lines.join("\r\n"), "text/plain");
     toast("已导出，发给医生");
   });
   $("exportJson").addEventListener("click", function(){
     state.backupAt = new Date().toLocaleString("zh-CN");
-    download("透析记录备份_" + today() + ".json", JSON.stringify(state, null, 2), "application/json");
+    download("dialysis-backup-" + today() + ".json", JSON.stringify(state, null, 2), "application/json");
     save(); toast("备份已导出");
   });
   $("importBtn").addEventListener("click", function(){ $("importFile").click(); });
@@ -472,7 +485,7 @@ tbody td .note{display:block;font-family:var(--f-body);font-size:12px;color:var(
         var o = JSON.parse(String(r.result));
         if(!o || !o.records) throw new Error("not backup");
         state = Object.assign(state, o); save();
-        renderTable(); renderTrend(); applyTheme(); toast("恢复成功");
+        renderTable(); renderTrend(); renderGluTrend(); applyTheme(); toast("恢复成功");
       }catch(e){ toast("这个文件不是备份文件"); }
       $("importFile").value = "";
     };
@@ -486,6 +499,7 @@ tbody td .note{display:block;font-family:var(--f-body);font-size:12px;color:var(
   renderTable();
   renderTrend();
   renderGluTrend();
+  syncGluWarn();
 })();
 </script>
 </body>
