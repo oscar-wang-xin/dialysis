@@ -6,7 +6,8 @@
 数据：  data/qr-links.json + data/link-titles.json + data/knowledge.json
 产物：  仓库根目录 6 个自包含 HTML（全英文文件名），双击即用、零外部依赖、可直接静态部署
 
-自检：外部资源、脚本闭合、占位符、数据完整性、页面间链接、隐私关键词、机构标识、ASCII 文件名。
+自检：外部资源、脚本闭合、占位符、数据完整性、页面间链接、隐私关键词、机构标识、
+来源与存疑残留、ASCII 文件名。
 任何一项不过就不写产物。
 """
 import html
@@ -44,7 +45,7 @@ ORG_BANNED = [
 PLACEHOLDERS = [
     'DATA_CARDS', 'DATA_TRIAGE', 'DATA_CHECKLIST',
     'DATA_LINKS_TREE', 'DATA_LINKS_DRUG',
-    'DATA_OPENHINT', 'DATA_SOURCENOTE', 'DATA_UNCERTAIN', 'DATA_DISCLAIMER',
+    'DATA_OPENHINT', 'DATA_DISCLAIMER',
 ]
 
 
@@ -126,35 +127,22 @@ def checklist_html(kn):
     )
 
 
-def links_html(items, group, uncertain):
+def links_html(items, group):
     out = []
     for it in items:
-        key = '%s-%d' % (group, it['no'])
-        doubt = '<span class="doubt">存疑</span>' if key in uncertain else ''
         plain = '%s %02d %s %s' % (it['title'], it['no'], it['url'], it['host'])
         out.append(
             '<li data-s="%s">\n'
             '  <a class="lnk" href="%s" target="_blank" rel="noopener noreferrer">\n'
-            '    <div class="lt">%s%s</div>\n'
+            '    <div class="lt">%s</div>\n'
             '    <div class="lm"><span class="no">%02d</span>%s<span class="go">↗</span></div>\n'
             '  </a>\n'
-            '</li>' % (esc(plain), esc(it['url']), esc(it['title']), doubt,
+            '</li>' % (esc(plain), esc(it['url']), esc(it['title']),
                        it['no'], esc(it['host']))
         )
     return '\n'.join(out)
 
 
-def uncertain_html(titles):
-    out = []
-    for key, note in sorted(titles['_uncertain'].items()):
-        out.append(
-            '<details class="fold" data-s="%s">\n'
-            '  <summary><span class="idx">%s</span><span>%s</span></summary>\n'
-            '  <p class="body">%s</p>\n'
-            '</details>' % (esc(key + ' ' + note), esc(key),
-                            '第 %s 条标题待对照原图' % esc(key), esc(note))
-        )
-    return '\n'.join(out)
 
 
 # ---------------- 自检 ----------------
@@ -243,6 +231,12 @@ def self_check(outputs, app):
     if org_hit:
         problems.append('疑似机构名称 / 联系方式：' + '; '.join(org_hit))
 
+    # 8. 页面不再展示「来源与存疑」板块，也不再给条目标「存疑」
+    for name, text in outputs.items():
+        for word in ('来源与存疑', 'class="doubt"', '>存疑<'):
+            if word in text:
+                problems.append('%s 仍残留来源 / 存疑展示：%s' % (name, word))
+
     # 7. 部署友好：成品文件名必须 ASCII，根目录不得残留旧中文名页面
     for name in outputs:
         if not name.isascii():
@@ -284,12 +278,10 @@ def main():
                     .replace('<!--DATA_TRIAGE-->', triage_html(kn))
                     .replace('<!--DATA_CHECKLIST-->', checklist_html(kn))
                     .replace('<!--DATA_LINKS_TREE-->',
-                             links_html(app['links']['tree'], 'tree', titles['_uncertain']))
+                             links_html(app['links']['tree'], 'tree'))
                     .replace('<!--DATA_LINKS_DRUG-->',
-                             links_html(app['links']['drug'], 'drug', titles['_uncertain']))
+                             links_html(app['links']['drug'], 'drug'))
                     .replace('<!--DATA_OPENHINT-->', esc(kn['source']['openHint']))
-                    .replace('<!--DATA_SOURCENOTE-->', esc(titles['_source']))
-                    .replace('<!--DATA_UNCERTAIN-->', uncertain_html(titles))
                     .replace('<!--DATA_DISCLAIMER-->', esc(kn['disclaimer'])))
         outputs[target] = text
 
@@ -307,11 +299,11 @@ def main():
     print('构建完成：%d 张离线页面，共 %.1f KB' % (len(outputs), total / 1024))
     for name in outputs:
         print('  - %-22s %6.1f KB' % (name, (ROOT / name).stat().st_size / 1024))
-    print('  宣教链接  %d 条 / 药物链接  %d 条（标题逐块辨认，%d 条存疑已标注）' %
-          (len(app['links']['tree']), len(app['links']['drug']), len(titles['_uncertain'])))
+    print('  宣教链接  %d 条 / 药物链接  %d 条（标题索引）' %
+          (len(app['links']['tree']), len(app['links']['drug'])))
     print('  常识卡    %d 张 / 分级排查 %d 级 / 问题清单 %d 条' %
           (len(app['cards']), len(app['triage']), len(app['checklists'])))
-    print('  自检      外部资源 / 占位符 / 数据完整性 / 页面链接 / 脚本闭合 / 隐私 / 机构标识 / ASCII 文件名  全部通过')
+    print('  自检      外部资源 / 占位符 / 数据完整性 / 页面链接 / 脚本闭合 / 隐私 / 机构标识 / 来源与存疑 / ASCII 文件名  全部通过')
     return 0
 
 
